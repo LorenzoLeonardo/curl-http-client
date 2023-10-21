@@ -1,0 +1,20 @@
+[package]
+name = "curl-http-client"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lorenzo Leonardo <enzotechcomputersolutions@gmail.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+async-curl = "0.1"
+curl = "0.4"
+env_logger = "0.10"
+http = "0.2"
+thiserror = "1.0"
+tokio = { version = "1.33", features = ["rt", "rt-multi-thread", "test-util", "macros", "time"] }
+url = "2.4"
+
+[dev-dependencies]
+wiremock = "=0.5.15"
+tempdir = "0.3"
