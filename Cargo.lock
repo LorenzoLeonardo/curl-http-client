@@ -170,6 +170,7 @@ dependencies = [
  "curl",
  "derive-deref-rs",
  "env_logger",
+ "futures",
  "http",
  "tempdir",
  "thiserror",

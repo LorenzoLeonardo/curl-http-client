@@ -19,3 +19,4 @@ url = "2.4"
 [dev-dependencies]
 wiremock = "=0.5.15"
 tempdir = "0.3"
+futures = "0.3"
