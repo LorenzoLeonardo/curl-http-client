@@ -5,7 +5,7 @@ use http::{HeaderMap, Method, StatusCode};
 use url::Url;
 
 use crate::collector::Collector;
-use crate::http_client::HttpClient;
+use crate::http_client::{BytesPerSec, HttpClient};
 use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
@@ -53,7 +53,7 @@ async fn test_download_with_speed_control() {
         body: None,
     };
     let response = HttpClient::new(curl, collector)
-        .download_speed(4000000)
+        .download_speed(BytesPerSec::from(4000000))
         .unwrap()
         .request(request)
         .unwrap()
