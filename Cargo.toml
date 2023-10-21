@@ -9,6 +9,7 @@ authors = ["Lorenzo Leonardo <enzotechcomputersolutions@gmail.com>"]
 [dependencies]
 async-curl = "0.1"
 curl = "0.4"
+derive-deref-rs = "0.1"
 env_logger = "0.10"
 http = "0.2"
 thiserror = "1.0"

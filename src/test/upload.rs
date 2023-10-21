@@ -5,7 +5,7 @@ use http::{HeaderMap, Method, StatusCode};
 use url::Url;
 
 use crate::collector::Collector;
-use crate::http_client::HttpClient;
+use crate::http_client::{BytesPerSec, FileSize, HttpClient};
 use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
@@ -28,7 +28,7 @@ async fn test_upload() {
         body: None,
     };
     let response = HttpClient::new(curl, collector)
-        .upload_file_size(file_size)
+        .upload_file_size(FileSize::from(file_size))
         .unwrap()
         .request(request)
         .unwrap()
@@ -60,9 +60,9 @@ async fn test_upload_with_speed_control() {
         body: None,
     };
     let response = HttpClient::new(curl, collector)
-        .upload_file_size(file_size)
+        .upload_file_size(FileSize::from(file_size))
         .unwrap()
-        .upload_speed(4000000)
+        .upload_speed(BytesPerSec::from(4000000))
         .unwrap()
         .request(request)
         .unwrap()

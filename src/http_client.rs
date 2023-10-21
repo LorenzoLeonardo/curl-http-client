@@ -1,5 +1,6 @@
 use async_curl::async_curl::AsyncCurl;
 use curl::easy::Easy2;
+use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
 
 use crate::{collector::Collector, error::Error, request::HttpRequest, response::HttpResponse};
@@ -88,30 +89,30 @@ impl HttpClient<Build> {
         })
     }
 
-    pub fn resume_from(mut self, offset: usize) -> Result<Self, Error> {
+    pub fn resume_from(mut self, offset: BytesOffset) -> Result<Self, Error> {
         self.easy
-            .resume_from(offset as u64)
+            .resume_from(*offset as u64)
             .map_err(|e| Error::Curl(e.to_string()))?;
         Ok(self)
     }
 
-    pub fn download_speed(mut self, bytes_sec: u64) -> Result<Self, Error> {
+    pub fn download_speed(mut self, speed: BytesPerSec) -> Result<Self, Error> {
         self.easy
-            .max_recv_speed(bytes_sec)
+            .max_recv_speed(*speed)
             .map_err(|e| Error::Curl(e.to_string()))?;
         Ok(self)
     }
 
-    pub fn upload_file_size(mut self, size: usize) -> Result<Self, Error> {
+    pub fn upload_file_size(mut self, size: FileSize) -> Result<Self, Error> {
         self.easy
-            .in_filesize(size as u64)
+            .in_filesize(*size as u64)
             .map_err(|e| Error::Curl(e.to_string()))?;
         Ok(self)
     }
 
-    pub fn upload_speed(mut self, bytes_sec: u64) -> Result<Self, Error> {
+    pub fn upload_speed(mut self, speed: BytesPerSec) -> Result<Self, Error> {
         self.easy
-            .max_send_speed(bytes_sec)
+            .max_send_speed(*speed)
             .map_err(|e| Error::Curl(e.to_string()))?;
         Ok(self)
     }
@@ -157,5 +158,32 @@ impl HttpClient<Perform> {
             headers: response_header,
             body: data,
         })
+    }
+}
+
+#[derive(Deref)]
+pub struct BytesPerSec(u64);
+
+impl From<u64> for BytesPerSec {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Deref)]
+pub struct BytesOffset(usize);
+
+impl From<usize> for BytesOffset {
+    fn from(value: usize) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Deref)]
+pub struct FileSize(usize);
+
+impl From<usize> for FileSize {
+    fn from(value: usize) -> Self {
+        Self(value)
     }
 }
