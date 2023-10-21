@@ -87,6 +87,20 @@ impl HttpClient<Build> {
             _state: Perform,
         })
     }
+
+    pub fn resume_from(mut self, offset: usize) -> Result<Self, Error> {
+        self.easy
+            .resume_from(offset as u64)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    pub fn download_speed(mut self, bytes_sec: u64) -> Result<Self, Error> {
+        self.easy
+            .max_recv_speed(bytes_sec)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
 }
 
 impl HttpClient<Perform> {
