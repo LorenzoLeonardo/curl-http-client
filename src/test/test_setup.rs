@@ -38,9 +38,16 @@ impl Respond for MockResponder {
                     ResponseTemplate::new(StatusCode::OK)
                 }
             },
-            Method::Put => {
-                unimplemented!()
-            }
+            Method::Put => match &self.responder {
+                ResponderType::File => {
+                    assert_eq!(include_bytes!("sample.jpg").to_vec(), request.body);
+                    ResponseTemplate::new(StatusCode::OK)
+                }
+                ResponderType::Body(body) => {
+                    assert_eq!(*body, request.body);
+                    ResponseTemplate::new(StatusCode::OK)
+                }
+            },
             _ => {
                 unimplemented!()
             }

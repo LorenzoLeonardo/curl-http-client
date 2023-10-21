@@ -101,6 +101,20 @@ impl HttpClient<Build> {
             .map_err(|e| Error::Curl(e.to_string()))?;
         Ok(self)
     }
+
+    pub fn upload_file_size(mut self, size: usize) -> Result<Self, Error> {
+        self.easy
+            .in_filesize(size as u64)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    pub fn upload_speed(mut self, bytes_sec: u64) -> Result<Self, Error> {
+        self.easy
+            .max_send_speed(bytes_sec)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
 }
 
 impl HttpClient<Perform> {
