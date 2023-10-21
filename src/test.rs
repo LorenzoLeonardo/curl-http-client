@@ -1,3 +1,4 @@
+mod asynchronous;
 mod download;
 mod get;
 mod post;
