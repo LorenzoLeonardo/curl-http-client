@@ -1,6 +1,4 @@
-///
 /// Error type returned by failed curl HTTP requests.
-///
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("curl request failed")]

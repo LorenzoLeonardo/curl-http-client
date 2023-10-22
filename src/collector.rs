@@ -30,6 +30,9 @@ impl FileInfo {
     }
 }
 
+/// The Collector will handle two types in order to store data, via File or via RAM.
+/// Collector::File(FileInfo) is useful to be able to download and upload files.
+/// Collector::Ram(Vec<u8>) is used to store response body into Memory.
 #[derive(Clone, Debug)]
 pub enum Collector {
     File(FileInfo),
@@ -93,6 +96,10 @@ impl Handler for Collector {
 }
 
 impl Collector {
+    /// If Collector::File(FileInfo) is set, there will be no response body since the response
+    /// will be stored into a file.
+    ///
+    /// If Collector::Ram(Vec<u8>) is set, the response body can be obtain here.
     pub fn get_response_body(&self) -> Option<Vec<u8>> {
         match self {
             Collector::File(_) => None,

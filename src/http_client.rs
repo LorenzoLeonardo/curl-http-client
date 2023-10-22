@@ -8,13 +8,28 @@ use crate::{collector::Collector, error::Error, request::HttpRequest, response::
 pub struct Build;
 pub struct Perform;
 
+/// The HTTP Client struct that wraps curl Easy2.
 pub struct HttpClient<S> {
+    /// This is the the actor handler that can be cloned to be able to handle multiple request sender
+    /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
+    /// non-blocking I/O during curl perform.
     curl: AsyncCurl<Collector>,
+    /// The Easy2<Collector> is the Easy2 from curl-rust crate wrapped in this struct to be able to do
+    /// asynchronous task during.
     easy: Easy2<Collector>,
+    /// This is a type-state builder pattern to help programmers not to mis-used when buding curl settings before perform
+    /// operation.
     _state: S,
 }
 
 impl HttpClient<Build> {
+    /// Creates a new HTTP Client.
+    ///
+    /// The AsyncCurl<Collector> is the actor handler that can be cloned to be able to handle multiple request sender
+    /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
+    /// non-blocking I/O during curl perform.
+    ///
+    /// The Collector is the type of container whether via RAM or via File.
     pub fn new(curl: AsyncCurl<Collector>, collector: Collector) -> Self {
         Self {
             curl,
@@ -23,6 +38,10 @@ impl HttpClient<Build> {
         }
     }
 
+    /// Sets the HTTP request.
+    ///
+    /// The HttpRequest can be customized by the caller byt setting the Url, Method Type,
+    /// Headers and the Body.
     pub fn request(mut self, request: HttpRequest) -> Result<HttpClient<Perform>, Error> {
         self.easy.url(&request.url.to_string()[..]).map_err(|e| {
             eprintln!("{:?}", e);
@@ -90,6 +109,12 @@ impl HttpClient<Build> {
         })
     }
 
+    /// Set a point to resume transfer from
+    ///
+    /// Specify the offset in bytes you want the transfer to start from.
+    ///
+    /// By default this option is 0 and corresponds to
+    /// `CURLOPT_RESUME_FROM_LARGE`.
     pub fn resume_from(mut self, offset: BytesOffset) -> Result<Self, Error> {
         self.easy
             .resume_from(*offset as u64)
@@ -97,6 +122,14 @@ impl HttpClient<Build> {
         Ok(self)
     }
 
+    /// Rate limit data download speed
+    ///
+    /// If a download exceeds this speed (counted in bytes per second) on
+    /// cumulative average during the transfer, the transfer will pause to keep
+    /// the average rate less than or equal to the parameter value.
+    ///
+    /// By default this option is not set (unlimited speed) and corresponds to
+    /// `CURLOPT_MAX_RECV_SPEED_LARGE`.
     pub fn download_speed(mut self, speed: BytesPerSec) -> Result<Self, Error> {
         self.easy
             .max_recv_speed(*speed)
@@ -104,6 +137,10 @@ impl HttpClient<Build> {
         Ok(self)
     }
 
+    /// Set the size of the input file to send off.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_INFILESIZE_LARGE`.
     pub fn upload_file_size(mut self, size: FileSize) -> Result<Self, Error> {
         self.easy
             .in_filesize(*size as u64)
@@ -111,6 +148,14 @@ impl HttpClient<Build> {
         Ok(self)
     }
 
+    /// Rate limit data upload speed
+    ///
+    /// If an upload exceeds this speed (counted in bytes per second) on
+    /// cumulative average during the transfer, the transfer will pause to keep
+    /// the average rate less than or equal to the parameter value.
+    ///
+    /// By default this option is not set (unlimited speed) and corresponds to
+    /// `CURLOPT_MAX_SEND_SPEED_LARGE`.
     pub fn upload_speed(mut self, speed: BytesPerSec) -> Result<Self, Error> {
         self.easy
             .max_send_speed(*speed)
@@ -120,6 +165,9 @@ impl HttpClient<Build> {
 }
 
 impl HttpClient<Perform> {
+    /// This will perform the curl operation asynchronously.
+    /// This becomes a non-blocking I/O since the actual perform operation is done
+    /// at the actor side.
     pub async fn perform(self) -> Result<HttpResponse, Error> {
         let mut easy = self.curl.send_request(self.easy).await.map_err(|e| {
             eprintln!("{:?}", e);
