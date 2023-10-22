@@ -4,7 +4,7 @@ use async_curl::async_curl::AsyncCurl;
 use http::{HeaderMap, Method, StatusCode};
 use url::Url;
 
-use crate::collector::Collector;
+use crate::collector::{Collector, FileInfo};
 use crate::http_client::{BytesPerSec, HttpClient};
 use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
@@ -17,7 +17,7 @@ async fn test_download() {
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
     let curl = AsyncCurl::new();
-    let collector = Collector::File(save_to.clone(), 0);
+    let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
         method: Method::GET,
@@ -45,7 +45,7 @@ async fn test_download_with_speed_control() {
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
     let curl = AsyncCurl::new();
-    let collector = Collector::File(save_to.clone(), 0);
+    let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
         method: Method::GET,

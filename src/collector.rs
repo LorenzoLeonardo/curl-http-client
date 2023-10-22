@@ -8,19 +8,42 @@ use std::{
 use curl::easy::{Handler, ReadError, WriteError};
 
 #[derive(Clone, Debug)]
+pub struct FileInfo {
+    pub path: PathBuf,
+    bytes_transferred: usize,
+}
+
+impl FileInfo {
+    pub fn path(path: PathBuf) -> Self {
+        Self {
+            path,
+            bytes_transferred: 0,
+        }
+    }
+
+    fn update_bytes_transferred(&mut self, transferred: usize) {
+        self.bytes_transferred += transferred;
+    }
+
+    fn bytes_transferred(&self) -> usize {
+        self.bytes_transferred
+    }
+}
+
+#[derive(Clone, Debug)]
 pub enum Collector {
-    File(PathBuf, usize),
+    File(FileInfo),
     Ram(Vec<u8>),
 }
 
 impl Handler for Collector {
     fn write(&mut self, data: &[u8]) -> Result<usize, WriteError> {
         match self {
-            Collector::File(download_path, _size) => {
+            Collector::File(info) => {
                 let mut file = OpenOptions::new()
                     .create(true)
                     .append(true)
-                    .open(download_path)
+                    .open(info.path.clone())
                     .map_err(|e| {
                         eprintln!("{}", e);
                         WriteError::Pause
@@ -30,6 +53,8 @@ impl Handler for Collector {
                     eprintln!("{}", e);
                     WriteError::Pause
                 })?;
+
+                info.update_bytes_transferred(data.len());
                 Ok(data.len())
             }
             Collector::Ram(container) => {
@@ -41,25 +66,24 @@ impl Handler for Collector {
 
     fn read(&mut self, data: &mut [u8]) -> Result<usize, ReadError> {
         match self {
-            Collector::File(path, size) => {
-                let mut file = File::open(path).map_err(|e| {
+            Collector::File(info) => {
+                let mut file = File::open(info.path.clone()).map_err(|e| {
                     eprintln!("{}", e);
                     ReadError::Abort
                 })?;
 
-                // Seek to the desired offset
-                file.seek(SeekFrom::Start(*size as u64)).map_err(|e| {
-                    eprintln!("{}", e);
-                    ReadError::Abort
-                })?;
+                file.seek(SeekFrom::Start(info.bytes_transferred() as u64))
+                    .map_err(|e| {
+                        eprintln!("{}", e);
+                        ReadError::Abort
+                    })?;
 
                 let read_size = file.read(data).map_err(|e| {
                     eprintln!("{}", e);
                     ReadError::Abort
                 })?;
 
-                // Update this so that we could seek succeding blocks of data from the file
-                *size += read_size;
+                info.update_bytes_transferred(read_size);
 
                 Ok(read_size)
             }
@@ -71,7 +95,7 @@ impl Handler for Collector {
 impl Collector {
     pub fn get_response_body(&self) -> Option<Vec<u8>> {
         match self {
-            Collector::File(_, _) => None,
+            Collector::File(_) => None,
             Collector::Ram(container) => Some(container.clone()),
         }
     }

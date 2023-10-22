@@ -4,7 +4,7 @@ use async_curl::async_curl::AsyncCurl;
 use http::{HeaderMap, Method, StatusCode};
 use url::Url;
 
-use crate::collector::Collector;
+use crate::collector::{Collector, FileInfo};
 use crate::http_client::{BytesPerSec, FileSize, HttpClient};
 use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
@@ -20,7 +20,7 @@ async fn test_upload() {
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
     let curl = AsyncCurl::new();
-    let collector = Collector::File(to_be_uploaded, 0);
+    let collector = Collector::File(FileInfo::path(to_be_uploaded));
     let request = HttpRequest {
         url: target_url,
         method: Method::PUT,
@@ -52,7 +52,7 @@ async fn test_upload_with_speed_control() {
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
     let curl = AsyncCurl::new();
-    let collector = Collector::File(to_be_uploaded.clone(), 0);
+    let collector = Collector::File(FileInfo::path(to_be_uploaded));
     let request = HttpRequest {
         url: target_url,
         method: Method::PUT,

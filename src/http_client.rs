@@ -79,6 +79,7 @@ impl HttpClient<Build> {
                     .map_err(|e| Error::Curl(e.to_string()))?;
             }
             _ => {
+                // TODO: For Future improvements to handle other Methods
                 unimplemented!();
             }
         }
