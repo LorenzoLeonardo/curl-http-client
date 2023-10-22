@@ -3,8 +3,12 @@ name = "curl-http-client"
 version = "0.1.0"
 edition = "2021"
 authors = ["Lorenzo Leonardo <enzotechcomputersolutions@gmail.com>"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "This is a wrapper for Easy2 from curl-rust crate for ergonomic use and is able to perform asynchronously using async-curl crate that uses an actor model (Message passing) to achieve a non-blocking I/O."
+repository = "https://github.com/LorenzoLeonardo/curl-http-client"
+homepage = "https://github.com/LorenzoLeonardo/curl-http-client"
+documentation = "https://docs.rs/curl-http-client"
+readme = "README.md"
 
 [dependencies]
 async-curl = "0.1"
