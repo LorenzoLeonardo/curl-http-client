@@ -20,7 +20,7 @@ impl MockResponder {
 
 impl Respond for MockResponder {
     fn respond(&self, request: &Request) -> ResponseTemplate {
-        println!("Request: {:?}", request);
+        //println!("Request: {:?}", request);
         match request.method {
             Method::Get => match &self.responder {
                 ResponderType::File => {

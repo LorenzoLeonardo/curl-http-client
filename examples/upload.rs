@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf};
 
 use async_curl::async_curl::AsyncCurl;
 use curl_http_client::{
-    collector::Collector,
+    collector::{Collector, FileInfo},
     http_client::{FileSize, HttpClient},
     request::HttpRequest,
 };
@@ -15,7 +15,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file_size = fs::metadata(file_to_be_uploaded.as_path()).unwrap().len() as usize;
 
     let curl = AsyncCurl::new();
-    let collector = Collector::File(file_to_be_uploaded, 0);
+    let collector = Collector::File(FileInfo::path(file_to_be_uploaded));
 
     let request = HttpRequest {
         url: Url::parse("<TARGET URL>")?,
