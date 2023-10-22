@@ -1,7 +1,7 @@
 # curl-http-client
 
 This is a wrapper for Easy2 from curl-rust crate for ergonomic use
-and able to perform asynchronously using async-curl crate
+and is able to perform asynchronously using async-curl crate
 that uses an actor model (Message passing) to achieve a non-blocking I/O.
 
 
