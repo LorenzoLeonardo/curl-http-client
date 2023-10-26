@@ -1,7 +1,7 @@
 use std::{path::Path, time::Duration};
 
 use async_curl::async_curl::AsyncCurl;
-use curl::easy::{Auth, Easy2};
+use curl::easy::{Auth, Easy2, ProxyType};
 use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
 
@@ -352,6 +352,147 @@ impl HttpClient<Build> {
         Ok(self)
     }
 
+    /// Set client certificate for proxy.
+    ///
+    /// By default this value is not set and corresponds to
+    /// `CURLOPT_PROXY_SSLCERT`.
+    pub fn proxy_sslcert(mut self, sslcert: &str) -> Result<Self, Error> {
+        self.easy
+            .proxy_sslcert(sslcert)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Specify type of the client SSL certificate for HTTPS proxy.
+    ///
+    /// The string should be the format of your certificate. Supported formats
+    /// are "PEM" and "DER", except with Secure Transport. OpenSSL (versions
+    /// 0.9.3 and later) and Secure Transport (on iOS 5 or later, or OS X 10.7
+    /// or later) also support "P12" for PKCS#12-encoded files.
+    ///
+    /// By default this option is "PEM" and corresponds to
+    /// `CURLOPT_PROXY_SSLCERTTYPE`.
+    pub fn proxy_sslcert_type(mut self, kind: &str) -> Result<Self, Error> {
+        self.easy
+            .proxy_sslcert_type(kind)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Set the client certificate for the proxy using an in-memory blob.
+    ///
+    /// The specified byte buffer should contain the binary content of the
+    /// certificate, which will be copied into the handle.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_PROXY_SSLCERT_BLOB`.
+    pub fn proxy_sslcert_blob(mut self, blob: &[u8]) -> Result<Self, Error> {
+        self.easy
+            .proxy_sslcert_blob(blob)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Set private key for HTTPS proxy.
+    ///
+    /// By default this value is not set and corresponds to
+    /// `CURLOPT_PROXY_SSLKEY`.
+    pub fn proxy_sslkey(mut self, sslkey: &str) -> Result<Self, Error> {
+        self.easy
+            .proxy_sslkey(sslkey)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Set type of the private key file for HTTPS proxy.
+    ///
+    /// The string should be the format of your private key. Supported formats
+    /// are "PEM", "DER" and "ENG".
+    ///
+    /// The format "ENG" enables you to load the private key from a crypto
+    /// engine. In this case `ssl_key` is used as an identifier passed to
+    /// the engine. You have to set the crypto engine with `ssl_engine`.
+    /// "DER" format key file currently does not work because of a bug in
+    /// OpenSSL.
+    ///
+    /// By default this option is "PEM" and corresponds to
+    /// `CURLOPT_PROXY_SSLKEYTYPE`.
+    pub fn proxy_sslkey_type(mut self, kind: &str) -> Result<Self, Error> {
+        self.easy
+            .proxy_sslkey_type(kind)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Set the private key for the proxy using an in-memory blob.
+    ///
+    /// The specified byte buffer should contain the binary content of the
+    /// private key, which will be copied into the handle.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_PROXY_SSLKEY_BLOB`.
+    pub fn proxy_sslkey_blob(mut self, blob: &[u8]) -> Result<Self, Error> {
+        self.easy
+            .proxy_sslkey_blob(blob)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Set passphrase to private key for HTTPS proxy.
+    ///
+    /// This will be used as the password required to use the `ssl_key`.
+    /// You never needed a pass phrase to load a certificate but you need one to
+    /// load your private key.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_PROXY_KEYPASSWD`.
+    pub fn proxy_key_password(mut self, password: &str) -> Result<Self, Error> {
+        self.easy
+            .proxy_key_password(password)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Indicates the type of proxy being used.
+    ///
+    /// By default this option is `ProxyType::Http` and corresponds to
+    /// `CURLOPT_PROXYTYPE`.
+    pub fn proxy_type(mut self, kind: ProxyType) -> Result<Self, Error> {
+        self.easy
+            .proxy_type(kind)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Provide a list of hosts that should not be proxied to.
+    ///
+    /// This string is a comma-separated list of hosts which should not use the
+    /// proxy specified for connections. A single `*` character is also accepted
+    /// as a wildcard for all hosts.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_NOPROXY`.
+    pub fn noproxy(mut self, skip: &str) -> Result<Self, Error> {
+        self.easy
+            .noproxy(skip)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Inform curl whether it should tunnel all operations through the proxy.
+    ///
+    /// This essentially means that a `CONNECT` is sent to the proxy for all
+    /// outbound requests.
+    ///
+    /// By default this option is `false` and corresponds to
+    /// `CURLOPT_HTTPPROXYTUNNEL`.
+    pub fn http_proxy_tunnel(mut self, tunnel: bool) -> Result<Self, Error> {
+        self.easy
+            .http_proxy_tunnel(tunnel)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
     /// Follow HTTP 3xx redirects.
     ///
     /// Indicates whether any `Location` headers in the response should get
@@ -445,6 +586,49 @@ impl HttpClient<Build> {
     pub fn show_header(mut self, show: bool) -> Result<Self, Error> {
         self.easy
             .show_header(show)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Indicates whether a progress meter will be shown for requests done with
+    /// this handle.
+    ///
+    /// This will also prevent the `progress_function` from being called.
+    ///
+    /// By default this option is `false` and corresponds to
+    /// `CURLOPT_NOPROGRESS`.
+    pub fn progress(mut self, progress: bool) -> Result<Self, Error> {
+        self.easy
+            .progress(progress)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Specify the preferred receive buffer size, in bytes.
+    ///
+    /// This is treated as a request, not an order, and the main point of this
+    /// is that the write callback may get called more often with smaller
+    /// chunks.
+    ///
+    /// By default this option is the maximum write size and corresopnds to
+    /// `CURLOPT_BUFFERSIZE`.
+    pub fn download_buffer_size(mut self, size: usize) -> Result<Self, Error> {
+        self.easy
+            .buffer_size(size)
+            .map_err(|e| Error::Curl(e.to_string()))?;
+        Ok(self)
+    }
+
+    /// Specify the preferred send buffer size, in bytes.
+    ///
+    /// This is treated as a request, not an order, and the main point of this
+    /// is that the read callback may get called more often with smaller
+    /// chunks.
+    ///
+    /// The upload buffer size is by default 64 kilobytes.
+    pub fn upload_buffer_size(mut self, size: usize) -> Result<Self, Error> {
+        self.easy
+            .upload_buffer_size(size)
             .map_err(|e| Error::Curl(e.to_string()))?;
         Ok(self)
     }
