@@ -44,7 +44,7 @@ impl HttpClient<Build> {
 
     /// Sets the HTTP request.
     ///
-    /// The HttpRequest can be customized by the caller byt setting the Url, Method Type,
+    /// The HttpRequest can be customized by the caller by setting the Url, Method Type,
     /// Headers and the Body.
     pub fn request(mut self, request: HttpRequest) -> Result<HttpClient<Perform>, Error> {
         self.easy.url(&request.url.to_string()[..]).map_err(|e| {
@@ -692,6 +692,7 @@ impl From<u64> for BytesPerSec {
 }
 
 /// A strong type unit when offsetting especially in resuming download
+/// or upload.
 #[derive(Deref)]
 pub struct BytesOffset(usize);
 
