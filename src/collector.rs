@@ -11,11 +11,13 @@ use curl::easy::{Handler, ReadError, WriteError};
 /// Internally it will also monitor the bytes transferred.
 #[derive(Clone, Debug)]
 pub struct FileInfo {
+    /// File path to download or file path of the source file to be uploaded.
     pub path: PathBuf,
     bytes_transferred: usize,
 }
 
 impl FileInfo {
+    /// Sets the destination file path to download or file path of the source file to be uploaded.
     pub fn path(path: PathBuf) -> Self {
         Self {
             path,
@@ -37,7 +39,9 @@ impl FileInfo {
 /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
 #[derive(Clone, Debug)]
 pub enum Collector {
+    /// Collector::File(FileInfo) is useful to be able to download and upload files.
     File(FileInfo),
+    /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
     Ram(Vec<u8>),
 }
 
