@@ -1,7 +1,11 @@
+use std::str::FromStr;
+
 use http::StatusCode;
 use tempdir::TempDir;
 use wiremock::{
-    http::Method, matchers::path, Mock, MockServer, Request, Respond, ResponseTemplate,
+    http::{HeaderName, HeaderValue, HeaderValues, Method},
+    matchers::path,
+    Mock, MockServer, Request, Respond, ResponseTemplate,
 };
 
 pub enum ResponderType {
@@ -20,12 +24,45 @@ impl MockResponder {
 
 impl Respond for MockResponder {
     fn respond(&self, request: &Request) -> ResponseTemplate {
-        //println!("Request: {:?}", request);
         match request.method {
             Method::Get => match &self.responder {
                 ResponderType::File => {
-                    let contents = include_bytes!("sample.jpg");
-                    ResponseTemplate::new(StatusCode::OK).set_body_bytes(contents.as_slice())
+                    let mock_file = include_bytes!("sample.jpg");
+                    let header_name = HeaderName::from_str("range").unwrap();
+                    let total_file_size = mock_file.len();
+                    println!("Request: {:?}", request);
+                    if let Some(value) = request.headers.get(&header_name) {
+                        let offset = parse_range(value).unwrap() as usize;
+                        println!("Offset: {}", offset);
+
+                        let content_length = format!("{}", total_file_size - offset);
+                        println!("Content-Length: {}", content_length);
+                        let content_range = format!(
+                            "bytes {}-{}/{}",
+                            offset,
+                            total_file_size - 1,
+                            total_file_size
+                        );
+                        println!("Content-Range: {}", content_range);
+
+                        ResponseTemplate::new(StatusCode::PARTIAL_CONTENT)
+                            .append_header(
+                                HeaderName::from_str("Content-Range").unwrap(),
+                                HeaderValue::from_str(content_range.as_str()).unwrap(),
+                            )
+                            .append_header(
+                                HeaderName::from_str("Content-Length").unwrap(),
+                                HeaderValue::from_str(content_length.as_str()).unwrap(),
+                            )
+                            .append_header(
+                                HeaderName::from_str("Accept-Ranges").unwrap(),
+                                HeaderValue::from_str("bytes").unwrap(),
+                            )
+                            .set_body_bytes(&mock_file[offset..])
+                    } else {
+                        let contents = include_bytes!("sample.jpg");
+                        ResponseTemplate::new(StatusCode::OK).set_body_bytes(contents.as_slice())
+                    }
                 }
                 ResponderType::Body(body) => {
                     ResponseTemplate::new(StatusCode::OK).set_body_bytes(body.as_slice())
@@ -52,6 +89,20 @@ impl Respond for MockResponder {
                 unimplemented!()
             }
         }
+    }
+}
+
+fn parse_range(input: &HeaderValues) -> Option<u64> {
+    let input = input.to_string();
+    if let Some(start_pos) = input.find('=') {
+        if let Some(end_pos) = input.rfind('-') {
+            let numeric_value = &input[start_pos + 1..end_pos];
+            numeric_value.parse::<u64>().ok()
+        } else {
+            None
+        }
+    } else {
+        None
     }
 }
 
