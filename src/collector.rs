@@ -7,9 +7,10 @@ use std::{
 };
 
 use curl::easy::{Handler, ReadError, WriteError};
+use tokio::sync::mpsc::Sender;
 
 #[derive(Clone, Debug)]
-struct TransferSpeed(f64);
+pub struct TransferSpeed(f64);
 
 impl TransferSpeed {
     fn as_bytes_per_sec(&self) -> u64 {
@@ -43,7 +44,7 @@ impl From<i64> for TransferSpeed {
 
 impl From<f64> for TransferSpeed {
     fn from(value: f64) -> Self {
-        Self(value as f64)
+        Self(value)
     }
 }
 /// Stores the path for the downloaded file or the uploaded file.
@@ -52,6 +53,9 @@ impl From<f64> for TransferSpeed {
 pub struct FileInfo {
     /// File path to download or file path of the source file to be uploaded.
     pub path: PathBuf,
+    /// Sends the transfer speed information via channel to another task.
+    /// This is an optional parameter depends on the user application.
+    send_speed_info: Option<Sender<TransferSpeed>>,
     bytes_transferred: usize,
     transfer_started: Instant,
     transfer_speed: TransferSpeed,
@@ -62,10 +66,18 @@ impl FileInfo {
     pub fn path(path: PathBuf) -> Self {
         Self {
             path,
+            send_speed_info: None,
             bytes_transferred: 0,
             transfer_started: Instant::now(),
             transfer_speed: TransferSpeed::from(0),
         }
+    }
+
+    /// Sets the FileInfo struct with a message passing channel to send transfer speed across user applications
+    /// It uses a tok
+    pub fn with_transfer_speed_sender(mut self, send_speed_info: Sender<TransferSpeed>) -> Self {
+        self.send_speed_info = Some(send_speed_info);
+        self
     }
 
     fn update_bytes_transferred(&mut self, transferred: usize) {
@@ -125,6 +137,15 @@ impl Handler for Collector {
                     "Download speed: {} kB/s",
                     info.transfer_speed().as_bytes_per_sec()
                 );
+
+                if let Some(tx) = info.send_speed_info.clone() {
+                    let transfer_speed = info.transfer_speed();
+                    tokio::spawn(async move {
+                        tx.send(transfer_speed).await.map_err(|e| {
+                            eprintln!("{:?}", e);
+                        })
+                    });
+                }
                 Ok(data.len())
             }
             Collector::Ram(container) => {
@@ -159,6 +180,14 @@ impl Handler for Collector {
                     "Upload speed: {} kB/s",
                     info.transfer_speed().as_bytes_per_sec()
                 );
+                if let Some(tx) = info.send_speed_info.clone() {
+                    let transfer_speed = info.transfer_speed();
+                    tokio::spawn(async move {
+                        tx.send(transfer_speed).await.map_err(|e| {
+                            eprintln!("{:?}", e);
+                        })
+                    });
+                }
                 Ok(read_size)
             }
             Collector::Ram(_) => Ok(0),
