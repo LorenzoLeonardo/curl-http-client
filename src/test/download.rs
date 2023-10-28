@@ -3,6 +3,7 @@ use std::fs;
 use async_curl::async_curl::AsyncCurl;
 use http::{HeaderMap, Method, StatusCode};
 use test_case::test_case;
+use tokio::sync::mpsc::channel;
 use url::Url;
 
 use crate::collector::{Collector, FileInfo};
@@ -105,4 +106,48 @@ async fn test_resume_download(offset: usize, expected_status_code: StatusCode) {
     assert_eq!(response.status_code, expected_status_code);
     assert_eq!(response.body, None);
     assert_eq!(fs::read(save_to).unwrap(), include_bytes!("sample.jpg"));
+}
+
+#[tokio::test]
+async fn test_download_with_transfer_speed_sender() {
+    let responder = MockResponder::new(ResponderType::File);
+    let (server, tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let save_to = tempdir.path().join("downloaded_file.jpg");
+
+    let curl = AsyncCurl::new();
+
+    let (tx, mut rx) = channel(1);
+
+    let file_info = FileInfo::path(save_to.clone()).with_transfer_speed_sender(tx);
+    let collector = Collector::File(file_info);
+    let request = HttpRequest {
+        url: target_url,
+        method: Method::GET,
+        headers: HeaderMap::new(),
+        body: None,
+    };
+
+    let handle = tokio::spawn(async move {
+        while let Some(speed) = rx.recv().await {
+            println!("Download Speed: {} kB/s", speed.as_bytes_per_sec());
+        }
+    });
+
+    let response = HttpClient::new(curl, collector)
+        .download_speed(BytesPerSec::from(4000000))
+        .unwrap()
+        .request(request)
+        .unwrap()
+        .perform()
+        .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    assert_eq!(response.status_code, StatusCode::OK);
+    assert_eq!(response.body, None);
+    assert_eq!(fs::read(save_to).unwrap(), include_bytes!("sample.jpg"));
+
+    handle.abort();
 }
