@@ -13,7 +13,7 @@ use tokio::sync::mpsc::Sender;
 pub struct TransferSpeed(f64);
 
 impl TransferSpeed {
-    fn as_bytes_per_sec(&self) -> u64 {
+    pub fn as_bytes_per_sec(&self) -> u64 {
         self.0 as u64
     }
 }
@@ -100,6 +100,17 @@ impl FileInfo {
     }
 }
 
+fn send_transfer_info(info: &FileInfo) {
+    if let Some(tx) = info.send_speed_info.clone() {
+        let transfer_speed = info.transfer_speed();
+        tokio::spawn(async move {
+            tx.send(transfer_speed).await.map_err(|e| {
+                eprintln!("{:?}", e);
+            })
+        });
+    }
+}
+
 /// The Collector will handle two types in order to store data, via File or via RAM.
 /// Collector::File(FileInfo) is useful to be able to download and upload files.
 /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
@@ -133,19 +144,8 @@ impl Handler for Collector {
                 })?;
 
                 info.update_bytes_transferred(data.len());
-                println!(
-                    "Download speed: {} kB/s",
-                    info.transfer_speed().as_bytes_per_sec()
-                );
 
-                if let Some(tx) = info.send_speed_info.clone() {
-                    let transfer_speed = info.transfer_speed();
-                    tokio::spawn(async move {
-                        tx.send(transfer_speed).await.map_err(|e| {
-                            eprintln!("{:?}", e);
-                        })
-                    });
-                }
+                send_transfer_info(info);
                 Ok(data.len())
             }
             Collector::Ram(container) => {
@@ -176,18 +176,8 @@ impl Handler for Collector {
                 })?;
 
                 info.update_bytes_transferred(read_size);
-                println!(
-                    "Upload speed: {} kB/s",
-                    info.transfer_speed().as_bytes_per_sec()
-                );
-                if let Some(tx) = info.send_speed_info.clone() {
-                    let transfer_speed = info.transfer_speed();
-                    tokio::spawn(async move {
-                        tx.send(transfer_speed).await.map_err(|e| {
-                            eprintln!("{:?}", e);
-                        })
-                    });
-                }
+
+                send_transfer_info(info);
                 Ok(read_size)
             }
             Collector::Ram(_) => Ok(0),
