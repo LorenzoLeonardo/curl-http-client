@@ -19,9 +19,9 @@ pub struct HttpClient<S> {
     /// non-blocking I/O during curl perform.
     curl: AsyncCurl<Collector>,
     /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
-    /// asynchronous task during.
+    /// asynchronous task during perform operation.
     easy: Easy2<Collector>,
-    /// This is a type-state builder pattern to help programmers not to mis-used when buding curl settings before perform
+    /// This is a type-state builder pattern to help programmers not to mis-used when building curl options before perform
     /// operation.
     _state: S,
 }
