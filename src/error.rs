@@ -1,8 +1,12 @@
+use std::fmt::Debug;
+
+use crate::collector::Collector;
+
 /// Error type returned by failed curl HTTP requests.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug)]
 pub enum Error {
-    #[error("curl request failed")]
-    Curl(String),
-    #[error("Other error: {}", _0)]
+    Curl(curl::Error),
+    Http(String),
+    Perform(async_curl::error::Error<Collector>),
     Other(String),
 }

@@ -1,4 +1,4 @@
-use async_curl::async_curl::AsyncCurl;
+use async_curl::actor::CurlActor;
 use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
 use futures::future;
 use http::{HeaderMap, Method};
@@ -8,7 +8,7 @@ use url::Url;
 async fn main() {
     const NUM_CONCURRENT: usize = 5;
 
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
     let mut handles = Vec::new();
 
     for _n in 0..NUM_CONCURRENT {

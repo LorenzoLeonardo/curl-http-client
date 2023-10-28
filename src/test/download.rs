@@ -1,6 +1,6 @@
 use std::fs;
 
-use async_curl::async_curl::AsyncCurl;
+use async_curl::actor::CurlActor;
 use http::{HeaderMap, Method, StatusCode};
 use test_case::test_case;
 use tokio::sync::mpsc::channel;
@@ -18,7 +18,7 @@ async fn test_download() {
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
@@ -46,7 +46,7 @@ async fn test_download_with_speed_control() {
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
@@ -85,7 +85,7 @@ async fn test_resume_download(offset: usize, expected_status_code: StatusCode) {
 
     let partial_file_size = fs::metadata(save_to.as_path()).unwrap().len() as usize;
 
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
@@ -116,7 +116,7 @@ async fn test_download_with_transfer_speed_sender() {
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
 
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
 
     let (tx, mut rx) = channel(1);
 

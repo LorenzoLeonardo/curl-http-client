@@ -1,4 +1,4 @@
-use async_curl::async_curl::AsyncCurl;
+use async_curl::actor::CurlActor;
 use http::{HeaderMap, Method, StatusCode};
 use url::Url;
 
@@ -13,7 +13,7 @@ async fn test_post() {
     let (server, _tempdir) = setup_test_environment(responder).await;
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
     let request = HttpRequest {
         url: target_url,
