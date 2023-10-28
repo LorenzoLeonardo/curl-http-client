@@ -77,8 +77,27 @@ impl Respond for MockResponder {
             },
             Method::Put => match &self.responder {
                 ResponderType::File => {
-                    assert_eq!(include_bytes!("sample.jpg").to_vec(), request.body);
-                    ResponseTemplate::new(StatusCode::OK)
+                    let header_name = HeaderName::from_str("content-range").unwrap();
+                    let content = include_bytes!("sample.jpg").to_vec();
+                    println!("Request Header: {:?}", request.headers);
+                    if let Some(value) = request.headers.get(&header_name) {
+                        let last_byte = parse_content_range(value).unwrap() as usize;
+                        let mut partial_content = content[0..last_byte].to_vec();
+
+                        partial_content.extend_from_slice(request.body.as_slice());
+                        assert_eq!(partial_content, content);
+                        let body = r#"{"message":"Partial upload successful","partial_upload_id":"ABC123"}"#;
+                        ResponseTemplate::new(StatusCode::PARTIAL_CONTENT)
+                            .append_header(
+                                HeaderName::from_str("Content-Range").unwrap(),
+                                value[0].clone(),
+                            )
+                            .append_header("Content-Type", "application/json")
+                            .set_body_bytes(body.as_bytes())
+                    } else {
+                        assert_eq!(content, request.body);
+                        ResponseTemplate::new(StatusCode::OK)
+                    }
                 }
                 ResponderType::Body(body) => {
                     assert_eq!(*body, request.body);
@@ -101,6 +120,18 @@ fn parse_range(input: &HeaderValues) -> Option<u64> {
         } else {
             None
         }
+    } else {
+        None
+    }
+}
+
+fn parse_content_range(input: &HeaderValues) -> Option<u64> {
+    let input = input.to_string();
+    println!("HeaderValues:{}", input);
+    let parts: Vec<&str> = input.split('-').collect();
+    if parts.len() == 2 {
+        let start_byte = parts[0].replace("[\"bytes ", "");
+        start_byte.parse::<u64>().ok()
     } else {
         None
     }
