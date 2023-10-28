@@ -1,6 +1,6 @@
 use std::fs;
 
-use async_curl::async_curl::AsyncCurl;
+use async_curl::actor::CurlActor;
 use http::{HeaderMap, Method, StatusCode};
 use tokio::sync::mpsc::channel;
 use url::Url;
@@ -20,7 +20,7 @@ async fn test_upload() {
     fs::write(to_be_uploaded.as_path(), include_bytes!("sample.jpg")).unwrap();
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
     let collector = Collector::File(FileInfo::path(to_be_uploaded));
     let request = HttpRequest {
         url: target_url,
@@ -52,7 +52,7 @@ async fn test_upload_with_speed_control() {
     fs::write(to_be_uploaded.clone(), include_bytes!("sample.jpg")).unwrap();
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
     let collector = Collector::File(FileInfo::path(to_be_uploaded));
     let request = HttpRequest {
         url: target_url,
@@ -87,7 +87,7 @@ async fn test_upload_with_transfer_speed_sender() {
 
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
-    let curl = AsyncCurl::new();
+    let curl = CurlActor::new();
 
     let (tx, mut rx) = channel(1);
 

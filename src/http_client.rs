@@ -1,6 +1,6 @@
 use std::{path::Path, time::Duration};
 
-use async_curl::async_curl::AsyncCurl;
+use async_curl::actor::CurlActor;
 use curl::easy::{Auth, Easy2, ProxyType};
 use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
@@ -17,7 +17,7 @@ pub struct HttpClient<S> {
     /// This is the the actor handler that can be cloned to be able to handle multiple request sender
     /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
     /// non-blocking I/O during curl perform.
-    curl: AsyncCurl<Collector>,
+    curl: CurlActor<Collector>,
     /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
     /// asynchronous task during perform operation.
     easy: Easy2<Collector>,
@@ -29,12 +29,12 @@ pub struct HttpClient<S> {
 impl HttpClient<Build> {
     /// Creates a new HTTP Client.
     ///
-    /// The [`AsyncCurl<Collector>`](https://docs.rs/async-curl/latest/async_curl/async_curl/struct.AsyncCurl.html) is the actor handler that can be cloned to be able to handle multiple request sender
+    /// The [`CurlActor<Collector>`](https://docs.rs/async-curl/latest/async_curl/async_curl/struct.CurlActor.html) is the actor handler that can be cloned to be able to handle multiple request sender
     /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
     /// non-blocking I/O during curl perform.
     ///
     /// The Collector is the type of container whether via RAM or via File.
-    pub fn new(curl: AsyncCurl<Collector>, collector: Collector) -> Self {
+    pub fn new(curl: CurlActor<Collector>, collector: Collector) -> Self {
         Self {
             curl,
             easy: Easy2::new(collector),
@@ -49,7 +49,7 @@ impl HttpClient<Build> {
     pub fn request(mut self, request: HttpRequest) -> Result<HttpClient<Perform>, Error> {
         self.easy.url(&request.url.to_string()[..]).map_err(|e| {
             eprintln!("{:?}", e);
-            Error::Curl(e.to_string())
+            Error::Curl(e)
         })?;
 
         let mut headers = curl::easy::List::new();
@@ -66,40 +66,34 @@ impl HttpClient<Build> {
                 ))
                 .map_err(|e| {
                     eprintln!("{:?}", e);
-                    Error::Curl(e.to_string())
+                    Error::Curl(e)
                 })
         })?;
 
         self.easy.http_headers(headers).map_err(|e| {
             eprintln!("{:?}", e);
-            Error::Curl(e.to_string())
+            Error::Curl(e)
         })?;
 
         match request.method {
             Method::POST => {
-                self.easy
-                    .post(true)
-                    .map_err(|e| Error::Curl(e.to_string()))?;
+                self.easy.post(true).map_err(Error::Curl)?;
                 if let Some(body) = request.body {
                     self.easy.post_field_size(body.len() as u64).map_err(|e| {
                         eprintln!("{:?}", e);
-                        Error::Curl(e.to_string())
+                        Error::Curl(e)
                     })?;
                     self.easy.post_fields_copy(body.as_slice()).map_err(|e| {
                         eprintln!("{:?}", e);
-                        Error::Curl(e.to_string())
+                        Error::Curl(e)
                     })?;
                 }
             }
             Method::GET => {
-                self.easy
-                    .get(true)
-                    .map_err(|e| Error::Curl(e.to_string()))?;
+                self.easy.get(true).map_err(Error::Curl)?;
             }
             Method::PUT => {
-                self.easy
-                    .upload(true)
-                    .map_err(|e| Error::Curl(e.to_string()))?;
+                self.easy.upload(true).map_err(Error::Curl)?;
             }
             _ => {
                 // TODO: For Future improvements to handle other Methods
@@ -120,9 +114,7 @@ impl HttpClient<Build> {
     /// By default this option is 0 and corresponds to
     /// `CURLOPT_RESUME_FROM_LARGE`.
     pub fn resume_from(mut self, offset: BytesOffset) -> Result<Self, Error> {
-        self.easy
-            .resume_from(*offset as u64)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.resume_from(*offset as u64).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -135,9 +127,7 @@ impl HttpClient<Build> {
     /// By default this option is not set (unlimited speed) and corresponds to
     /// `CURLOPT_MAX_RECV_SPEED_LARGE`.
     pub fn download_speed(mut self, speed: BytesPerSec) -> Result<Self, Error> {
-        self.easy
-            .max_recv_speed(*speed)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.max_recv_speed(*speed).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -146,9 +136,7 @@ impl HttpClient<Build> {
     /// By default this option is not set and corresponds to
     /// `CURLOPT_INFILESIZE_LARGE`.
     pub fn upload_file_size(mut self, size: FileSize) -> Result<Self, Error> {
-        self.easy
-            .in_filesize(*size as u64)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.in_filesize(*size as u64).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -161,9 +149,7 @@ impl HttpClient<Build> {
     /// By default this option is not set (unlimited speed) and corresponds to
     /// `CURLOPT_MAX_SEND_SPEED_LARGE`.
     pub fn upload_speed(mut self, speed: BytesPerSec) -> Result<Self, Error> {
-        self.easy
-            .max_send_speed(*speed)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.max_send_speed(*speed).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -174,9 +160,7 @@ impl HttpClient<Build> {
     ///
     /// By default this value is not set and corresponds to `CURLOPT_USERNAME`.
     pub fn username(mut self, user: &str) -> Result<Self, Error> {
-        self.easy
-            .username(user)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.username(user).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -184,9 +168,7 @@ impl HttpClient<Build> {
     ///
     /// By default this value is not set and corresponds to `CURLOPT_PASSWORD`.
     pub fn password(mut self, pass: &str) -> Result<Self, Error> {
-        self.easy
-            .password(pass)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.password(pass).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -202,18 +184,14 @@ impl HttpClient<Build> {
     ///
     /// By default this value is basic and corresponds to `CURLOPT_HTTPAUTH`.
     pub fn http_auth(mut self, auth: &Auth) -> Result<Self, Error> {
-        self.easy
-            .http_auth(auth)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.http_auth(auth).map_err(Error::Curl)?;
         Ok(self)
     }
 
     /// Configures the port number to connect to, instead of the one specified
     /// in the URL or the default of the protocol.
     pub fn port(mut self, port: u16) -> Result<Self, Error> {
-        self.easy
-            .port(port)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.port(port).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -243,9 +221,7 @@ impl HttpClient<Build> {
     /// By default this option is the system defaults, and corresponds to
     /// `CURLOPT_CAINFO`.
     pub fn cainfo<P: AsRef<Path>>(mut self, path: P) -> Result<Self, Error> {
-        self.easy
-            .cainfo(path)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.cainfo(path).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -258,9 +234,7 @@ impl HttpClient<Build> {
     ///
     /// By default this option is not set and corresponds to `CURLOPT_CAPATH`.
     pub fn capath<P: AsRef<Path>>(mut self, path: P) -> Result<Self, Error> {
-        self.easy
-            .capath(path)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.capath(path).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -270,9 +244,7 @@ impl HttpClient<Build> {
     /// By default this value is not set and corresponds to
     /// `CURLOPT_PROXYUSERNAME`.
     pub fn proxy_username(mut self, user: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy_username(user)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_username(user).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -282,9 +254,7 @@ impl HttpClient<Build> {
     /// By default this value is not set and corresponds to
     /// `CURLOPT_PROXYPASSWORD`.
     pub fn proxy_password(mut self, pass: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy_password(pass)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_password(pass).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -298,9 +268,7 @@ impl HttpClient<Build> {
     ///
     /// By default this value is basic and corresponds to `CURLOPT_PROXYAUTH`.
     pub fn proxy_auth(mut self, auth: &Auth) -> Result<Self, Error> {
-        self.easy
-            .proxy_auth(auth)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_auth(auth).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -308,9 +276,7 @@ impl HttpClient<Build> {
     ///
     /// By default this option is not set and corresponds to `CURLOPT_PROXY`.
     pub fn proxy(mut self, url: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy(url)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy(url).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -319,9 +285,7 @@ impl HttpClient<Build> {
     /// By default this option is not set (the default port for the proxy
     /// protocol is used) and corresponds to `CURLOPT_PROXYPORT`.
     pub fn proxy_port(mut self, port: u16) -> Result<Self, Error> {
-        self.easy
-            .proxy_port(port)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_port(port).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -330,9 +294,7 @@ impl HttpClient<Build> {
     /// By default this value is not set and corresponds to
     /// `CURLOPT_PROXY_CAINFO`.
     pub fn proxy_cainfo(mut self, cainfo: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy_cainfo(cainfo)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_cainfo(cainfo).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -346,9 +308,7 @@ impl HttpClient<Build> {
     /// By default this value is not set and corresponds to
     /// `CURLOPT_PROXY_CAPATH`.
     pub fn proxy_capath<P: AsRef<Path>>(mut self, path: P) -> Result<Self, Error> {
-        self.easy
-            .proxy_capath(path)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_capath(path).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -357,9 +317,7 @@ impl HttpClient<Build> {
     /// By default this value is not set and corresponds to
     /// `CURLOPT_PROXY_SSLCERT`.
     pub fn proxy_sslcert(mut self, sslcert: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy_sslcert(sslcert)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_sslcert(sslcert).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -373,9 +331,7 @@ impl HttpClient<Build> {
     /// By default this option is "PEM" and corresponds to
     /// `CURLOPT_PROXY_SSLCERTTYPE`.
     pub fn proxy_sslcert_type(mut self, kind: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy_sslcert_type(kind)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_sslcert_type(kind).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -387,9 +343,7 @@ impl HttpClient<Build> {
     /// By default this option is not set and corresponds to
     /// `CURLOPT_PROXY_SSLCERT_BLOB`.
     pub fn proxy_sslcert_blob(mut self, blob: &[u8]) -> Result<Self, Error> {
-        self.easy
-            .proxy_sslcert_blob(blob)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_sslcert_blob(blob).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -398,9 +352,7 @@ impl HttpClient<Build> {
     /// By default this value is not set and corresponds to
     /// `CURLOPT_PROXY_SSLKEY`.
     pub fn proxy_sslkey(mut self, sslkey: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy_sslkey(sslkey)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_sslkey(sslkey).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -418,9 +370,7 @@ impl HttpClient<Build> {
     /// By default this option is "PEM" and corresponds to
     /// `CURLOPT_PROXY_SSLKEYTYPE`.
     pub fn proxy_sslkey_type(mut self, kind: &str) -> Result<Self, Error> {
-        self.easy
-            .proxy_sslkey_type(kind)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_sslkey_type(kind).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -432,9 +382,7 @@ impl HttpClient<Build> {
     /// By default this option is not set and corresponds to
     /// `CURLOPT_PROXY_SSLKEY_BLOB`.
     pub fn proxy_sslkey_blob(mut self, blob: &[u8]) -> Result<Self, Error> {
-        self.easy
-            .proxy_sslkey_blob(blob)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_sslkey_blob(blob).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -449,7 +397,7 @@ impl HttpClient<Build> {
     pub fn proxy_key_password(mut self, password: &str) -> Result<Self, Error> {
         self.easy
             .proxy_key_password(password)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+            .map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -458,9 +406,7 @@ impl HttpClient<Build> {
     /// By default this option is `ProxyType::Http` and corresponds to
     /// `CURLOPT_PROXYTYPE`.
     pub fn proxy_type(mut self, kind: ProxyType) -> Result<Self, Error> {
-        self.easy
-            .proxy_type(kind)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.proxy_type(kind).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -473,9 +419,7 @@ impl HttpClient<Build> {
     /// By default this option is not set and corresponds to
     /// `CURLOPT_NOPROXY`.
     pub fn noproxy(mut self, skip: &str) -> Result<Self, Error> {
-        self.easy
-            .noproxy(skip)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.noproxy(skip).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -487,9 +431,7 @@ impl HttpClient<Build> {
     /// By default this option is `false` and corresponds to
     /// `CURLOPT_HTTPPROXYTUNNEL`.
     pub fn http_proxy_tunnel(mut self, tunnel: bool) -> Result<Self, Error> {
-        self.easy
-            .http_proxy_tunnel(tunnel)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.http_proxy_tunnel(tunnel).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -501,9 +443,7 @@ impl HttpClient<Build> {
     /// By default this option is `false` and corresponds to
     /// `CURLOPT_FOLLOWLOCATION`.
     pub fn follow_location(mut self, enable: bool) -> Result<Self, Error> {
-        self.easy
-            .follow_location(enable)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.follow_location(enable).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -516,9 +456,7 @@ impl HttpClient<Build> {
     /// By default this value is 300 seconds and corresponds to
     /// `CURLOPT_CONNECTTIMEOUT_MS`.
     pub fn connect_timeout(mut self, timeout: Duration) -> Result<Self, Error> {
-        self.easy
-            .connect_timeout(timeout)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.connect_timeout(timeout).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -547,9 +485,7 @@ impl HttpClient<Build> {
     /// By default this option is not set and corresponds to
     /// `CURLOPT_TIMEOUT_MS`.
     pub fn timeout(mut self, timeout: Duration) -> Result<Self, Error> {
-        self.easy
-            .timeout(timeout)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.timeout(timeout).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -565,9 +501,7 @@ impl HttpClient<Build> {
     ///
     /// By default, this option is `false`.
     pub fn verbose(mut self, verbose: bool) -> Result<Self, Error> {
-        self.easy
-            .verbose(verbose)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.verbose(verbose).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -584,9 +518,7 @@ impl HttpClient<Build> {
     /// By default, this option is `false` and corresponds to
     /// `CURLOPT_HEADER`.
     pub fn show_header(mut self, show: bool) -> Result<Self, Error> {
-        self.easy
-            .show_header(show)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.show_header(show).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -598,9 +530,7 @@ impl HttpClient<Build> {
     /// By default this option is `false` and corresponds to
     /// `CURLOPT_NOPROGRESS`.
     pub fn progress(mut self, progress: bool) -> Result<Self, Error> {
-        self.easy
-            .progress(progress)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.progress(progress).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -613,9 +543,7 @@ impl HttpClient<Build> {
     /// By default this option is the maximum write size and corresopnds to
     /// `CURLOPT_BUFFERSIZE`.
     pub fn download_buffer_size(mut self, size: usize) -> Result<Self, Error> {
-        self.easy
-            .buffer_size(size)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.buffer_size(size).map_err(Error::Curl)?;
         Ok(self)
     }
 
@@ -627,9 +555,7 @@ impl HttpClient<Build> {
     ///
     /// The upload buffer size is by default 64 kilobytes.
     pub fn upload_buffer_size(mut self, size: usize) -> Result<Self, Error> {
-        self.easy
-            .upload_buffer_size(size)
-            .map_err(|e| Error::Curl(e.to_string()))?;
+        self.easy.upload_buffer_size(size).map_err(Error::Curl)?;
         Ok(self)
     }
 }
@@ -641,26 +567,26 @@ impl HttpClient<Perform> {
     pub async fn perform(self) -> Result<HttpResponse, Error> {
         let mut easy = self.curl.send_request(self.easy).await.map_err(|e| {
             eprintln!("{:?}", e);
-            Error::Curl(e.to_string())
+            Error::Perform(e)
         })?;
 
         let data = easy.get_ref().get_response_body().take();
         let status_code = easy.response_code().map_err(|e| {
             eprintln!("{:?}", e);
-            Error::Curl(e.to_string())
+            Error::Curl(e)
         })? as u16;
         let response_header = easy
             .content_type()
             .map_err(|e| {
                 eprintln!("{:?}", e);
-                Error::Curl(e.to_string())
+                Error::Curl(e)
             })?
             .map(|content_type| {
                 Ok(vec![(
                     CONTENT_TYPE,
                     HeaderValue::from_str(content_type).map_err(|err| {
                         eprintln!("{:?}", err);
-                        Error::Curl(err.to_string())
+                        Error::Http(err.to_string())
                     })?,
                 )]
                 .into_iter()
@@ -672,7 +598,7 @@ impl HttpClient<Perform> {
         Ok(HttpResponse {
             status_code: StatusCode::from_u16(status_code).map_err(|err| {
                 eprintln!("{:?}", err);
-                Error::Curl(err.to_string())
+                Error::Http(err.to_string())
             })?,
             headers: response_header,
             body: data,
