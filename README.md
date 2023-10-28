@@ -221,3 +221,100 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+## Downloading a File with download speed information sent to different task
+```rust
+use std::path::PathBuf;
+
+use async_curl::async_curl::AsyncCurl;
+use curl_http_client::{
+    collector::{Collector, FileInfo},
+    http_client::HttpClient,
+    request::HttpRequest,
+};
+use http::{HeaderMap, Method};
+use tokio::sync::mpsc::channel;
+use url::Url;
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let (tx, mut rx) = channel(1);
+
+    let curl = AsyncCurl::new();
+    let file_info = FileInfo::path(PathBuf::from("<FILE PATH TO SAVE>")).with_transfer_speed_sender(tx);
+    let collector = Collector::File(file_info);
+
+    let handle = tokio::spawn(async move {
+        while let Some(speed) = rx.recv().await {
+            println!("Download Speed: {} kB/s", speed.as_bytes_per_sec());
+        }
+    });
+
+    let request = HttpRequest {
+        url: Url::parse("<SOURCE URL>")?,
+        method: Method::GET,
+        headers: HeaderMap::new(),
+        body: None,
+    };
+
+    let response = HttpClient::new(curl, collector)
+        .request(request)?
+        .perform()
+        .await?;
+
+    println!("Response: {:?}", response);
+
+    handle.abort();
+    Ok(())
+}
+```
+
+## Uploading a File with upload speed information sent to different task
+```rust
+use std::{fs, path::PathBuf};
+
+use async_curl::async_curl::AsyncCurl;
+use curl_http_client::{
+    collector::{Collector, FileInfo},
+    http_client::{FileSize, HttpClient},
+    request::HttpRequest,
+};
+use http::{HeaderMap, Method};
+use tokio::sync::mpsc::channel;
+use url::Url;
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let (tx, mut rx) = channel(1);
+
+    let file_to_be_uploaded = PathBuf::from("<FILE PATH TO BE UPLOADED>");
+    let file_size = fs::metadata(file_to_be_uploaded.as_path()).unwrap().len() as usize;
+
+    let curl = AsyncCurl::new();
+    let file_info = FileInfo::path(file_to_be_uploaded).with_transfer_speed_sender(tx);
+    let collector = Collector::File(file_info);
+
+    let handle = tokio::spawn(async move {
+        while let Some(speed) = rx.recv().await {
+            println!("Upload Speed: {} kB/s", speed.as_bytes_per_sec());
+        }
+    });
+
+    let request = HttpRequest {
+        url: Url::parse("<TARGET URL>")?,
+        method: Method::PUT,
+        headers: HeaderMap::new(),
+        body: None,
+    };
+
+    let response = HttpClient::new(curl, collector)
+        .upload_file_size(FileSize::from(file_size))?
+        .request(request)?
+        .perform()
+        .await?;
+
+    println!("Response: {:?}", response);
+    handle.abort();
+    Ok(())
+}
+```

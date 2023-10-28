@@ -9,6 +9,9 @@ use std::{
 use curl::easy::{Handler, ReadError, WriteError};
 use tokio::sync::mpsc::Sender;
 
+/// This is an information about the transfer(Download/Upload) speed that will be sent across tasks.
+/// It is useful to get the transfer speed and displayed it according to
+/// user's application.
 #[derive(Clone, Debug)]
 pub struct TransferSpeed(f64);
 
@@ -48,7 +51,7 @@ impl From<f64> for TransferSpeed {
     }
 }
 /// Stores the path for the downloaded file or the uploaded file.
-/// Internally it will also monitor the bytes transferred.
+/// Internally it will also monitor the bytes transferred and the Download/Upload speed.
 #[derive(Clone, Debug)]
 pub struct FileInfo {
     /// File path to download or file path of the source file to be uploaded.
@@ -73,8 +76,8 @@ impl FileInfo {
         }
     }
 
-    /// Sets the FileInfo struct with a message passing channel to send transfer speed across user applications
-    /// It uses a tok
+    /// Sets the FileInfo struct with a message passing channel to send transfer speed information across user applications.
+    /// It uses a tokio bounded channel to send the information across tasks.
     pub fn with_transfer_speed_sender(mut self, send_speed_info: Sender<TransferSpeed>) -> Self {
         self.send_speed_info = Some(send_speed_info);
         self
@@ -83,7 +86,6 @@ impl FileInfo {
     fn update_bytes_transferred(&mut self, transferred: usize) {
         self.bytes_transferred += transferred;
 
-        // Now compute for transfer speed(Download or upload)
         let now = Instant::now();
         let difference = now.duration_since(self.transfer_started);
 
