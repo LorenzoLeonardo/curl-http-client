@@ -1,4 +1,5 @@
 use std::io::Read;
+use std::time::Instant;
 use std::{
     fs::{File, OpenOptions},
     io::{Seek, SeekFrom, Write},
@@ -7,6 +8,44 @@ use std::{
 
 use curl::easy::{Handler, ReadError, WriteError};
 
+#[derive(Clone, Debug)]
+struct TransferSpeed(f64);
+
+impl TransferSpeed {
+    fn as_bytes_per_sec(&self) -> u64 {
+        self.0 as u64
+    }
+}
+
+impl From<u64> for TransferSpeed {
+    fn from(value: u64) -> Self {
+        Self(value as f64)
+    }
+}
+
+impl From<usize> for TransferSpeed {
+    fn from(value: usize) -> Self {
+        Self(value as f64)
+    }
+}
+
+impl From<i32> for TransferSpeed {
+    fn from(value: i32) -> Self {
+        Self(value as f64)
+    }
+}
+
+impl From<i64> for TransferSpeed {
+    fn from(value: i64) -> Self {
+        Self(value as f64)
+    }
+}
+
+impl From<f64> for TransferSpeed {
+    fn from(value: f64) -> Self {
+        Self(value as f64)
+    }
+}
 /// Stores the path for the downloaded file or the uploaded file.
 /// Internally it will also monitor the bytes transferred.
 #[derive(Clone, Debug)]
@@ -14,6 +53,8 @@ pub struct FileInfo {
     /// File path to download or file path of the source file to be uploaded.
     pub path: PathBuf,
     bytes_transferred: usize,
+    transfer_started: Instant,
+    transfer_speed: TransferSpeed,
 }
 
 impl FileInfo {
@@ -22,15 +63,28 @@ impl FileInfo {
         Self {
             path,
             bytes_transferred: 0,
+            transfer_started: Instant::now(),
+            transfer_speed: TransferSpeed::from(0),
         }
     }
 
     fn update_bytes_transferred(&mut self, transferred: usize) {
         self.bytes_transferred += transferred;
+
+        // Now compute for transfer speed(Download or upload)
+        let now = Instant::now();
+        let difference = now.duration_since(self.transfer_started);
+
+        self.transfer_speed =
+            TransferSpeed::from((self.bytes_transferred) as f64 / difference.as_secs_f64());
     }
 
     fn bytes_transferred(&self) -> usize {
         self.bytes_transferred
+    }
+
+    fn transfer_speed(&self) -> TransferSpeed {
+        self.transfer_speed.clone()
     }
 }
 
@@ -67,6 +121,10 @@ impl Handler for Collector {
                 })?;
 
                 info.update_bytes_transferred(data.len());
+                println!(
+                    "Download speed: {} kB/s",
+                    info.transfer_speed().as_bytes_per_sec()
+                );
                 Ok(data.len())
             }
             Collector::Ram(container) => {
@@ -97,7 +155,10 @@ impl Handler for Collector {
                 })?;
 
                 info.update_bytes_transferred(read_size);
-
+                println!(
+                    "Upload speed: {} kB/s",
+                    info.transfer_speed().as_bytes_per_sec()
+                );
                 Ok(read_size)
             }
             Collector::Ram(_) => Ok(0),
