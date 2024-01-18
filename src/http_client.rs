@@ -1,7 +1,7 @@
 use std::{path::Path, time::Duration};
 
 use async_curl::actor::CurlActor;
-use curl::easy::{Auth, Easy2, ProxyType};
+use curl::easy::{Auth, Easy2, ProxyType, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
 
@@ -556,6 +556,158 @@ impl HttpClient<Build> {
     /// The upload buffer size is by default 64 kilobytes.
     pub fn upload_buffer_size(mut self, size: usize) -> Result<Self, Error> {
         self.easy.upload_buffer_size(size).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Specify the preferred receive buffer size, in bytes.
+    ///
+    /// This is treated as a request, not an order, and the main point of this
+    /// is that the write callback may get called more often with smaller
+    /// chunks.
+    ///
+    /// By default this option is the maximum write size and corresopnds to
+    /// `CURLOPT_BUFFERSIZE`.
+    pub fn buffer_size(mut self, size: usize) -> Result<Self, Error> {
+        self.easy.buffer_size(size).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Re-initializes this handle to the default values.
+    ///
+    /// This puts the handle to the same state as it was in when it was just
+    /// created. This does, however, keep live connections, the session id
+    /// cache, the dns cache, and cookies.
+    pub fn reset(&mut self) {
+        self.easy.reset()
+    }
+
+    /// Provides the URL which this handle will work with.
+    ///
+    /// The string provided must be URL-encoded with the format:
+    ///
+    /// ```text
+    /// scheme://host:port/path
+    /// ```
+    ///
+    /// The syntax is not validated as part of this function and that is
+    /// deferred until later.
+    ///
+    /// By default this option is not set and `perform` will not work until it
+    /// is set. This option corresponds to `CURLOPT_URL`.
+    pub fn url(mut self, url: &str) -> Result<Self, Error> {
+        self.easy.url(url).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Set a custom request string
+    ///
+    /// Specifies that a custom request will be made (e.g. a custom HTTP
+    /// method). This does not change how libcurl performs internally, just
+    /// changes the string sent to the server.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_CUSTOMREQUEST`.
+    pub fn custom_request(mut self, request: &str) -> Result<Self, Error> {
+        self.easy.custom_request(request).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Get the modification time of the remote resource
+    ///
+    /// If true, libcurl will attempt to get the modification time of the
+    /// remote document in this operation. This requires that the remote server
+    /// sends the time or replies to a time querying command. The `filetime`
+    /// function can be used after a transfer to extract the received time (if
+    /// any).
+    ///
+    /// By default this option is `false` and corresponds to `CURLOPT_FILETIME`
+    pub fn fetch_filetime(mut self, fetch: bool) -> Result<Self, Error> {
+        self.easy.fetch_filetime(fetch).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Indicate whether to download the request without getting the body
+    ///
+    /// This is useful, for example, for doing a HEAD request.
+    ///
+    /// By default this option is `false` and corresponds to `CURLOPT_NOBODY`.
+    pub fn nobody(mut self, enable: bool) -> Result<Self, Error> {
+        self.easy.nobody(enable).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Set the size of the input file to send off.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_INFILESIZE_LARGE`.
+    pub fn in_filesize(mut self, size: u64) -> Result<Self, Error> {
+        self.easy.in_filesize(size).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Enable or disable data upload.
+    ///
+    /// This means that a PUT request will be made for HTTP and probably wants
+    /// to be combined with the read callback as well as the `in_filesize`
+    /// method.
+    ///
+    /// By default this option is `false` and corresponds to `CURLOPT_UPLOAD`.
+    pub fn upload(mut self, enable: bool) -> Result<Self, Error> {
+        self.easy.upload(enable).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Configure the maximum file size to download.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_MAXFILESIZE_LARGE`.
+    pub fn max_filesize(mut self, size: u64) -> Result<Self, Error> {
+        self.easy.max_filesize(size).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Selects a condition for a time request.
+    ///
+    /// This value indicates how the `time_value` option is interpreted.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_TIMECONDITION`.
+    pub fn time_condition(mut self, cond: TimeCondition) -> Result<Self, Error> {
+        self.easy.time_condition(cond).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Sets the time value for a conditional request.
+    ///
+    /// The value here should be the number of seconds elapsed since January 1,
+    /// 1970. To pass how to interpret this value, use `time_condition`.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_TIMEVALUE`.
+    pub fn time_value(mut self, val: i64) -> Result<Self, Error> {
+        self.easy.time_value(val).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Ask for a HTTP GET request.
+    ///
+    /// By default this option is `false` and corresponds to `CURLOPT_HTTPGET`.
+    pub fn get(mut self, enable: bool) -> Result<Self, Error> {
+        self.easy.get(enable).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Make an HTTP POST request.
+    ///
+    /// This will also make the library use the
+    /// `Content-Type: application/x-www-form-urlencoded` header.
+    ///
+    /// POST data can be specified through `post_fields` or by specifying a read
+    /// function.
+    ///
+    /// By default this option is `false` and corresponds to `CURLOPT_POST`.
+    pub fn post(mut self, enable: bool) -> Result<Self, Error> {
+        self.easy.post(enable).map_err(Error::Curl)?;
         Ok(self)
     }
 }
