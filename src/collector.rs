@@ -8,6 +8,7 @@ use std::{
 
 use curl::easy::{Handler, ReadError, WriteError};
 use tokio::sync::mpsc::Sender;
+use log::trace;
 
 /// This is an information about the transfer(Download/Upload) speed that will be sent across tasks.
 /// It is useful to get the transfer speed and displayed it according to
@@ -107,7 +108,7 @@ fn send_transfer_info(info: &FileInfo) {
         let transfer_speed = info.transfer_speed();
         tokio::spawn(async move {
             tx.send(transfer_speed).await.map_err(|e| {
-                eprintln!("{:?}", e);
+                trace!("{:?}", e);
             })
         });
     }
@@ -136,12 +137,12 @@ impl Handler for Collector {
                     .append(true)
                     .open(info.path.clone())
                     .map_err(|e| {
-                        eprintln!("{}", e);
+                        trace!("{}", e);
                         WriteError::Pause
                     })?;
 
                 file.write_all(data).map_err(|e| {
-                    eprintln!("{}", e);
+                    trace!("{}", e);
                     WriteError::Pause
                 })?;
 
@@ -162,18 +163,18 @@ impl Handler for Collector {
         match self {
             Collector::File(info) => {
                 let mut file = File::open(info.path.clone()).map_err(|e| {
-                    eprintln!("{}", e);
+                    trace!("{}", e);
                     ReadError::Abort
                 })?;
 
                 file.seek(SeekFrom::Start(info.bytes_transferred() as u64))
                     .map_err(|e| {
-                        eprintln!("{}", e);
+                        trace!("{}", e);
                         ReadError::Abort
                     })?;
 
                 let read_size = file.read(data).map_err(|e| {
-                    eprintln!("{}", e);
+                    trace!("{}", e);
                     ReadError::Abort
                 })?;
 
