@@ -162,6 +162,7 @@ dependencies = [
  "derive-deref-rs",
  "futures",
  "http",
+ "log",
  "tempdir",
  "test-case",
  "thiserror",
