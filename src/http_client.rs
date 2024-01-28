@@ -1,7 +1,7 @@
 use std::{path::Path, time::Duration};
 
 use async_curl::actor::CurlActor;
-use curl::easy::{Auth, Easy2, Handler, ProxyType, TimeCondition};
+use curl::easy::{Auth, Easy, Easy2, Handler, ProxyType, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
 use log::trace;
@@ -725,14 +725,22 @@ impl<C> HttpClient<C, Perform>
 where
     C: ExtendedHandler + std::fmt::Debug + Send,
 {
+    /// This will send the request asynchronously,
+    /// and return the underlying Easy2<Collector> useful if you
+    /// want to decide how to transform the response yourself.
+    pub async fn send_request(self) -> Result<Easy2<C>, Error<C>> {
+        let easy = self.curl.send_request(self.easy).await.map_err(|e| {
+            trace!("{:?}", e);
+            Error::Perform(e)
+        })?;
+        Ok(easy)
+    }
+
     /// This will perform the curl operation asynchronously.
     /// This becomes a non-blocking I/O since the actual perform operation is done
     /// at the actor side.
     pub async fn perform(self) -> Result<HttpResponse, Error<C>> {
-        let mut easy = self.curl.send_request(self.easy).await.map_err(|e| {
-            trace!("{:?}", e);
-            Error::Perform(e)
-        })?;
+        let mut easy = self.send_request().await?;
 
         let data = easy.get_ref().get_response_body().take();
         let status_code = easy.response_code().map_err(|e| {
