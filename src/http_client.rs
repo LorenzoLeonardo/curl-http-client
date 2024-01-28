@@ -1,7 +1,7 @@
 use std::{path::Path, time::Duration};
 
 use async_curl::actor::CurlActor;
-use curl::easy::{Auth, Easy, Easy2, Handler, ProxyType, TimeCondition};
+use curl::easy::{Auth, Easy2, Handler, ProxyType, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
 use log::trace;
