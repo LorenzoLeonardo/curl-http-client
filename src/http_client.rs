@@ -4,6 +4,7 @@ use async_curl::actor::CurlActor;
 use curl::easy::{Auth, Easy2, Handler, ProxyType, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
+use log::trace;
 
 use crate::{
     collector::ExtendedHandler, error::Error, request::HttpRequest, response::HttpResponse,
@@ -56,7 +57,7 @@ where
     /// Headers and the Body.
     pub fn request(mut self, request: HttpRequest) -> Result<HttpClient<C, Perform>, Error<C>> {
         self.easy.url(&request.url.to_string()[..]).map_err(|e| {
-            eprintln!("{:?}", e);
+            trace!("{:?}", e);
             Error::Curl(e)
         })?;
 
@@ -73,13 +74,13 @@ where
                     )))?
                 ))
                 .map_err(|e| {
-                    eprintln!("{:?}", e);
+                    trace!("{:?}", e);
                     Error::Curl(e)
                 })
         })?;
 
         self.easy.http_headers(headers).map_err(|e| {
-            eprintln!("{:?}", e);
+            trace!("{:?}", e);
             Error::Curl(e)
         })?;
 
@@ -88,11 +89,11 @@ where
                 self.easy.post(true).map_err(Error::Curl)?;
                 if let Some(body) = request.body {
                     self.easy.post_field_size(body.len() as u64).map_err(|e| {
-                        eprintln!("{:?}", e);
+                        trace!("{:?}", e);
                         Error::Curl(e)
                     })?;
                     self.easy.post_fields_copy(body.as_slice()).map_err(|e| {
-                        eprintln!("{:?}", e);
+                        trace!("{:?}", e);
                         Error::Curl(e)
                     })?;
                 }
@@ -729,26 +730,26 @@ where
     /// at the actor side.
     pub async fn perform(self) -> Result<HttpResponse, Error<C>> {
         let mut easy = self.curl.send_request(self.easy).await.map_err(|e| {
-            eprintln!("{:?}", e);
+            trace!("{:?}", e);
             Error::Perform(e)
         })?;
 
         let data = easy.get_ref().get_response_body().take();
         let status_code = easy.response_code().map_err(|e| {
-            eprintln!("{:?}", e);
+            trace!("{:?}", e);
             Error::Curl(e)
         })? as u16;
         let response_header = easy
             .content_type()
             .map_err(|e| {
-                eprintln!("{:?}", e);
+                trace!("{:?}", e);
                 Error::Curl(e)
             })?
             .map(|content_type| {
                 Ok(vec![(
                     CONTENT_TYPE,
                     HeaderValue::from_str(content_type).map_err(|err| {
-                        eprintln!("{:?}", err);
+                        trace!("{:?}", err);
                         Error::Http(err.to_string())
                     })?,
                 )]
@@ -760,7 +761,7 @@ where
 
         Ok(HttpResponse {
             status_code: StatusCode::from_u16(status_code).map_err(|err| {
-                eprintln!("{:?}", err);
+                trace!("{:?}", err);
                 Error::Http(err.to_string())
             })?,
             headers: response_header,
