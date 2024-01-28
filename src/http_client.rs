@@ -1,10 +1,10 @@
 use std::{path::Path, time::Duration};
 
-use log::trace;
 use async_curl::actor::CurlActor;
 use curl::easy::{Auth, Easy2, ProxyType, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
+use log::trace;
 
 use crate::{collector::Collector, error::Error, request::HttpRequest, response::HttpResponse};
 
