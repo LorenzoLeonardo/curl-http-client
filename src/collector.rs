@@ -113,6 +113,14 @@ fn send_transfer_info(info: &FileInfo) {
     }
 }
 
+/// This is an extended trait for the curl::easy::Handler trait.
+pub trait ExtendedHandler: Handler {
+    // Return the response body if the Collector if available.
+    fn get_response_body(&self) -> Option<Vec<u8>> {
+        None
+    }
+}
+
 /// The Collector will handle two types in order to store data, via File or via RAM.
 /// Collector::File(FileInfo) is useful to be able to download and upload files.
 /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
@@ -187,12 +195,12 @@ impl Handler for Collector {
     }
 }
 
-impl Collector {
+impl ExtendedHandler for Collector {
     /// If Collector::File(FileInfo) is set, there will be no response body since the response
     /// will be stored into a file.
     ///
     /// If Collector::Ram(`Vec<u8>`) is set, the response body can be obtain here.
-    pub fn get_response_body(&self) -> Option<Vec<u8>> {
+    fn get_response_body(&self) -> Option<Vec<u8>> {
         match self {
             Collector::File(_) => None,
             Collector::Ram(container) => Some(container.clone()),
