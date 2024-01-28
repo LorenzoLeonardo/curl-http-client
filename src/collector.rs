@@ -7,8 +7,8 @@ use std::{
 };
 
 use curl::easy::{Handler, ReadError, WriteError};
-use tokio::sync::mpsc::Sender;
 use log::trace;
+use tokio::sync::mpsc::Sender;
 
 /// This is an information about the transfer(Download/Upload) speed that will be sent across tasks.
 /// It is useful to get the transfer speed and displayed it according to
