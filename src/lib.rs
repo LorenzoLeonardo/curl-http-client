@@ -319,5 +319,10 @@ pub mod error;
 pub mod http_client;
 pub mod request;
 pub mod response;
+
+pub mod dep {
+    pub use curl;
+}
+
 #[cfg(test)]
 mod test;
