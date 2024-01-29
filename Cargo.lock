@@ -168,7 +168,7 @@ dependencies = [
 
 [[package]]
 name = "curl-http-client"
-version = "0.3.3"
+version = "0.3.4"
 dependencies = [
  "async-curl",
  "curl",
