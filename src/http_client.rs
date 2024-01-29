@@ -466,7 +466,7 @@ where
     ///
     /// By default this option is `false` and corresponds to
     /// `CURLOPT_FORBID_REUSE`.
-    pub fn forbid_reuse(&mut self, enable: bool) -> Result<Self, Error<C>> {
+    pub fn forbid_reuse(mut self, enable: bool) -> Result<Self, Error<C>> {
         self.easy.forbid_reuse(enable).map_err(Error::Curl)?;
         Ok(self)
     }
@@ -724,7 +724,7 @@ where
     ///
     /// By default this option is `false` and corresponds to
     /// `CURLOPT_COOKIESESSION`.
-    pub fn cookie_session(&mut self, session: bool) -> Result<Self, Error<C>> {
+    pub fn cookie_session(mut self, session: bool) -> Result<Self, Error<C>> {
         self.easy.cookie_session(session).map_err(Error::Curl)?;
         Ok(self)
     }
