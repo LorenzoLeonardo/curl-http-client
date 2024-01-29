@@ -1,7 +1,7 @@
 use std::{path::Path, time::Duration};
 
 use async_curl::actor::CurlActor;
-use curl::easy::{Auth, Easy2, Handler, ProxyType, TimeCondition};
+use curl::easy::{Auth, Easy2, Handler, HttpVersion, ProxyType, SslVersion, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{
     header::{CONTENT_LENGTH, CONTENT_TYPE},
@@ -459,6 +459,20 @@ where
         Ok(self)
     }
 
+    /// Force a new connection to be used.
+    ///
+    /// Makes the next transfer use a new (fresh) connection by force instead of
+    /// trying to re-use an existing one. This option should be used with
+    /// caution and only if you understand what it does as it may seriously
+    /// impact performance.
+    ///
+    /// By default this option is `false` and corresponds to
+    /// `CURLOPT_FRESH_CONNECT`.
+    pub fn fresh_connect(mut self, enable: bool) -> Result<Self, Error<C>> {
+        self.easy.fresh_connect(enable).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
     /// Make connection get closed at once after use.
     ///
     /// Makes libcurl explicitly close the connection when done with the
@@ -513,6 +527,24 @@ where
     /// `CURLOPT_TIMEOUT_MS`.
     pub fn timeout(mut self, timeout: Duration) -> Result<Self, Error<C>> {
         self.easy.timeout(timeout).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Set preferred HTTP version.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_HTTP_VERSION`.
+    pub fn http_version(mut self, version: HttpVersion) -> Result<Self, Error<C>> {
+        self.easy.http_version(version).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Set preferred TLS/SSL version.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_SSLVERSION`.
+    pub fn ssl_version(mut self, version: SslVersion) -> Result<Self, Error<C>> {
+        self.easy.ssl_version(version).map_err(Error::Curl)?;
         Ok(self)
     }
 
