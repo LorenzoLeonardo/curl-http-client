@@ -3,7 +3,10 @@ use std::{path::Path, time::Duration};
 use async_curl::actor::CurlActor;
 use curl::easy::{Auth, Easy2, Handler, ProxyType, TimeCondition};
 use derive_deref_rs::Deref;
-use http::{header::CONTENT_TYPE, HeaderMap, HeaderValue, Method, StatusCode};
+use http::{
+    header::{CONTENT_LENGTH, CONTENT_TYPE},
+    HeaderMap, HeaderValue, Method, StatusCode,
+};
 use log::trace;
 
 use crate::{
@@ -778,7 +781,7 @@ where
             trace!("{:?}", e);
             Error::Curl(e)
         })? as u16;
-        let response_header = easy
+        let mut response_header = easy
             .content_type()
             .map_err(|e| {
                 trace!("{:?}", e);
@@ -797,6 +800,19 @@ where
             })
             .transpose()?
             .unwrap_or_else(HeaderMap::new);
+
+        let content_length = easy.content_length_download().map_err(|e| {
+            trace!("{:?}", e);
+            Error::Curl(e)
+        })?;
+
+        response_header.insert(
+            CONTENT_LENGTH,
+            HeaderValue::from_str(content_length.to_string().as_str()).map_err(|err| {
+                trace!("{:?}", err);
+                Error::Http(err.to_string())
+            })?,
+        );
 
         Ok(HttpResponse {
             status_code: StatusCode::from_u16(status_code).map_err(|err| {
