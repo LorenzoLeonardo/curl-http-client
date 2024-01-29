@@ -456,6 +456,21 @@ where
         Ok(self)
     }
 
+    /// Make connection get closed at once after use.
+    ///
+    /// Makes libcurl explicitly close the connection when done with the
+    /// transfer. Normally, libcurl keeps all connections alive when done with
+    /// one transfer in case a succeeding one follows that can re-use them.
+    /// This option should be used with caution and only if you understand what
+    /// it does as it can seriously impact performance.
+    ///
+    /// By default this option is `false` and corresponds to
+    /// `CURLOPT_FORBID_REUSE`.
+    pub fn forbid_reuse(&mut self, enable: bool) -> Result<Self, Error<C>> {
+        self.easy.forbid_reuse(enable).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
     /// Timeout for the connect phase
     ///
     /// This is the maximum time that you allow the connection phase to the
@@ -695,6 +710,22 @@ where
     /// `CURLOPT_TIMEVALUE`.
     pub fn time_value(mut self, val: i64) -> Result<Self, Error<C>> {
         self.easy.time_value(val).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Start a new cookie session
+    ///
+    /// Marks this as a new cookie "session". It will force libcurl to ignore
+    /// all cookies it is about to load that are "session cookies" from the
+    /// previous session. By default, libcurl always stores and loads all
+    /// cookies, independent if they are session cookies or not. Session cookies
+    /// are cookies without expiry date and they are meant to be alive and
+    /// existing for this "session" only.
+    ///
+    /// By default this option is `false` and corresponds to
+    /// `CURLOPT_COOKIESESSION`.
+    pub fn cookie_session(&mut self, session: bool) -> Result<Self, Error<C>> {
+        self.easy.cookie_session(session).map_err(Error::Curl)?;
         Ok(self)
     }
 
