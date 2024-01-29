@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use http::StatusCode;
-use tempdir::TempDir;
+use tempfile::TempDir;
 use wiremock::{
     http::{HeaderName, HeaderValue, HeaderValues, Method},
     matchers::path,
@@ -108,7 +108,7 @@ fn parse_range(input: &HeaderValues) -> Option<u64> {
 
 pub async fn setup_test_environment(responder: MockResponder) -> (MockServer, TempDir) {
     let mock_server = MockServer::start().await;
-    let tempdir = TempDir::new_in("./", "test").unwrap();
+    let tempdir = TempDir::with_prefix_in("test", "./").unwrap();
 
     Mock::given(path("/test"))
         .respond_with(responder)
