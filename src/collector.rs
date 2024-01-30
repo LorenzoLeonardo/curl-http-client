@@ -7,6 +7,7 @@ use std::{
 };
 
 use curl::easy::{Handler, ReadError, WriteError};
+use log::trace;
 use tokio::sync::mpsc::Sender;
 
 /// This is an information about the transfer(Download/Upload) speed that will be sent across tasks.
@@ -107,9 +108,17 @@ fn send_transfer_info(info: &FileInfo) {
         let transfer_speed = info.transfer_speed();
         tokio::spawn(async move {
             tx.send(transfer_speed).await.map_err(|e| {
-                eprintln!("{:?}", e);
+                trace!("{:?}", e);
             })
         });
+    }
+}
+
+/// This is an extended trait for the curl::easy::Handler trait.
+pub trait ExtendedHandler: Handler {
+    // Return the response body if the Collector if available.
+    fn get_response_body(&self) -> Option<Vec<u8>> {
+        None
     }
 }
 
@@ -136,12 +145,12 @@ impl Handler for Collector {
                     .append(true)
                     .open(info.path.clone())
                     .map_err(|e| {
-                        eprintln!("{}", e);
+                        trace!("{}", e);
                         WriteError::Pause
                     })?;
 
                 file.write_all(data).map_err(|e| {
-                    eprintln!("{}", e);
+                    trace!("{}", e);
                     WriteError::Pause
                 })?;
 
@@ -162,18 +171,18 @@ impl Handler for Collector {
         match self {
             Collector::File(info) => {
                 let mut file = File::open(info.path.clone()).map_err(|e| {
-                    eprintln!("{}", e);
+                    trace!("{}", e);
                     ReadError::Abort
                 })?;
 
                 file.seek(SeekFrom::Start(info.bytes_transferred() as u64))
                     .map_err(|e| {
-                        eprintln!("{}", e);
+                        trace!("{}", e);
                         ReadError::Abort
                     })?;
 
                 let read_size = file.read(data).map_err(|e| {
-                    eprintln!("{}", e);
+                    trace!("{}", e);
                     ReadError::Abort
                 })?;
 
@@ -187,12 +196,12 @@ impl Handler for Collector {
     }
 }
 
-impl Collector {
+impl ExtendedHandler for Collector {
     /// If Collector::File(FileInfo) is set, there will be no response body since the response
     /// will be stored into a file.
     ///
     /// If Collector::Ram(`Vec<u8>`) is set, the response body can be obtain here.
-    pub fn get_response_body(&self) -> Option<Vec<u8>> {
+    fn get_response_body(&self) -> Option<Vec<u8>> {
         match self {
             Collector::File(_) => None,
             Collector::Ram(container) => Some(container.clone()),
