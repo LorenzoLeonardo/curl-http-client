@@ -41,11 +41,12 @@ where
 {
     /// Creates a new HTTP Client.
     ///
-    /// The [`CurlActor<Collector>`](https://docs.rs/async-curl/latest/async_curl/async_curl/struct.CurlActor.html) is the actor handler that can be cloned to be able to handle multiple request sender
+    /// The [`CurlActor`](https://docs.rs/async-curl/latest/async_curl/actor/struct.CurlActor.html) is the actor handler that can be cloned to be able to handle multiple request sender
     /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
     /// non-blocking I/O during curl perform.
     ///
-    /// The Collector is the type of container whether via RAM or via File.
+    /// The C is a generic type to be able to implement a custom HTTP response collector whoever uses this crate.
+    /// There is a built-in [`Collector`](https://docs.rs/curl-http-client/latest/curl_http_client/collector/enum.Collector.html) in this crate that can be used store HTTP response body into memory or in a File.
     pub fn new(curl: CurlActor<C>, collector: C) -> Self {
         Self {
             curl,
@@ -792,7 +793,7 @@ where
     C: ExtendedHandler + std::fmt::Debug + Send,
 {
     /// This will send the request asynchronously,
-    /// and return the underlying Easy2<Collector> useful if you
+    /// and return the underlying [`Easy2<C>`](https://docs.rs/curl/latest/curl/easy/struct.Easy2.html) useful if you
     /// want to decide how to transform the response yourself.
     pub async fn send_request(self) -> Result<Easy2<C>, Error<C>> {
         let easy = self.curl.send_request(self.easy).await.map_err(|e| {
