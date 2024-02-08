@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::io::Read;
 use std::time::Instant;
 use std::{
@@ -7,6 +8,7 @@ use std::{
 };
 
 use curl::easy::{Handler, ReadError, WriteError};
+use http::{HeaderMap, HeaderName, HeaderValue};
 use log::trace;
 use tokio::sync::mpsc::Sender;
 
@@ -120,6 +122,10 @@ pub trait ExtendedHandler: Handler {
     fn get_response_body(&self) -> Option<Vec<u8>> {
         None
     }
+    // Return the response body if the Collector if available with complete headers.
+    fn get_response_body_and_headers(&self) -> (Option<Vec<u8>>, Option<HeaderMap>) {
+        (None, None)
+    }
 }
 
 /// The Collector will handle two types in order to store data, via File or via RAM.
@@ -131,6 +137,8 @@ pub enum Collector {
     File(FileInfo),
     /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
     Ram(Vec<u8>),
+    /// Collector::RamWithHeaders(`Vec<u8>`, `Vec<u8>`) is used to store response body into Memory and with complete Headers.
+    RamAndHeaders(Vec<u8>, Vec<u8>),
 }
 
 impl Handler for Collector {
@@ -163,6 +171,10 @@ impl Handler for Collector {
                 container.extend_from_slice(data);
                 Ok(data.len())
             }
+            Collector::RamAndHeaders(container, _) => {
+                container.extend_from_slice(data);
+                Ok(data.len())
+            }
         }
     }
     /// This will read the chunks of data from a file that will be uploaded
@@ -192,7 +204,19 @@ impl Handler for Collector {
                 Ok(read_size)
             }
             Collector::Ram(_) => Ok(0),
+            Collector::RamAndHeaders(_, _) => Ok(0),
         }
+    }
+
+    fn header(&mut self, data: &[u8]) -> bool {
+        match self {
+            Collector::File(_) => {}
+            Collector::Ram(_) => {}
+            Collector::RamAndHeaders(_, headers) => {
+                headers.extend_from_slice(data);
+            }
+        }
+        true
     }
 }
 
@@ -205,6 +229,35 @@ impl ExtendedHandler for Collector {
         match self {
             Collector::File(_) => None,
             Collector::Ram(container) => Some(container.clone()),
+            Collector::RamAndHeaders(container, _) => Some(container.clone()),
+        }
+    }
+
+    /// If Collector::File(FileInfo) is set, there will be no response body since the response
+    /// will be stored into a file.
+    ///
+    /// If Collector::RamAndHeaders(`Vec<u8>`, `Vec<u8>`) is set, the response body and complete header can be obtain here.
+    fn get_response_body_and_headers(&self) -> (Option<Vec<u8>>, Option<HeaderMap>) {
+        match self {
+            Collector::File(_) => (None, None),
+            Collector::Ram(container) => (Some(container.clone()), None),
+            Collector::RamAndHeaders(container, headers) => {
+                let header_str = std::str::from_utf8(headers).unwrap();
+                let mut header_map = HeaderMap::new();
+
+                for line in header_str.lines() {
+                    // Split each line into key-value pairs
+                    if let Some((key, value)) = line.split_once(": ").to_owned() {
+                        if let Ok(header_name) = HeaderName::from_bytes(key.as_bytes()) {
+                            if let Ok(header_value) = HeaderValue::from_str(&value) {
+                                // Insert the key-value pair into the HeaderMap
+                                header_map.insert(header_name, header_value);
+                            }
+                        }
+                    }
+                }
+                (Some(container.clone()), Some(header_map))
+            }
         }
     }
 }
