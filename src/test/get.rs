@@ -31,4 +31,32 @@ async fn test_get() {
     println!("Response: {:?}", response);
     assert_eq!(response.status_code, StatusCode::OK);
     assert_eq!(response.body.unwrap(), "test body".as_bytes().to_vec());
+    assert!(!response.headers.is_empty());
+}
+
+#[tokio::test]
+async fn test_get_with_headers() {
+    let responder = MockResponder::new(ResponderType::Body("test body".as_bytes().to_vec()));
+    let (server, _tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let curl = CurlActor::new();
+    let collector = Collector::RamAndHeaders(Vec::new(), Vec::new());
+    let request = HttpRequest {
+        url: target_url,
+        method: Method::GET,
+        headers: HeaderMap::new(),
+        body: None,
+    };
+    let response = HttpClient::new(curl, collector)
+        .request(request)
+        .unwrap()
+        .perform()
+        .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    assert_eq!(response.status_code, StatusCode::OK);
+    assert_eq!(response.body.unwrap(), "test body".as_bytes().to_vec());
+    assert!(!response.headers.is_empty());
 }
