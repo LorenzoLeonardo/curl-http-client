@@ -118,11 +118,11 @@ fn send_transfer_info(info: &FileInfo) {
 
 /// This is an extended trait for the curl::easy::Handler trait.
 pub trait ExtendedHandler: Handler {
-    // Return the response body if the Collector if available.
+    // Return the response body if the Collector is available.
     fn get_response_body(&self) -> Option<Vec<u8>> {
         None
     }
-    // Return the response body if the Collector if available with complete headers.
+    // Return the response body if the Collector is available with complete headers.
     fn get_response_body_and_headers(&self) -> (Option<Vec<u8>>, Option<HeaderMap>) {
         (None, None)
     }
