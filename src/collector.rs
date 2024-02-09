@@ -128,18 +128,19 @@ pub trait ExtendedHandler: Handler {
     }
 }
 
-/// The Collector will handle two types in order to store data, via File or via RAM.
-/// Collector::File(FileInfo) is useful to be able to download and upload files.
+/// Collector::File(FileInfo) is used to be able to download and upload files.
 /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
+/// Collector::RamWithHeaders(`Vec<u8>`, `Vec<u8>`) is used to store response body into Memory and with complete headers.
+/// Collector::FileAndHeaders(`FileInfo`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
 #[derive(Clone, Debug)]
 pub enum Collector {
-    /// Collector::File(FileInfo) is used to be able to download and upload files.
+    /// Collector::File(`FileInfo`) is used to be able to download and upload files.
     File(FileInfo),
     /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
     Ram(Vec<u8>),
     /// Collector::RamWithHeaders(`Vec<u8>`, `Vec<u8>`) is used to store response body into Memory and with complete headers.
     RamAndHeaders(Vec<u8>, Vec<u8>),
-    /// Collector::FileAndHeaders(`Vec<u8>`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
+    /// Collector::FileAndHeaders(`FileInfo`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
     FileAndHeaders(FileInfo, Vec<u8>),
 }
 

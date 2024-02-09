@@ -809,43 +809,50 @@ where
     pub async fn perform(self) -> Result<HttpResponse, Error<C>> {
         let mut easy = self.send_request().await?;
 
-        let data = easy.get_ref().get_response_body().take();
+        let (data, headers) = easy.get_ref().get_response_body_and_headers();
         let status_code = easy.response_code().map_err(|e| {
             trace!("{:?}", e);
             Error::Curl(e)
         })? as u16;
-        let mut response_header = easy
-            .content_type()
-            .map_err(|e| {
+
+        let response_header = if let Some(response_header) = headers {
+            response_header
+        } else {
+            let mut response_header = easy
+                .content_type()
+                .map_err(|e| {
+                    trace!("{:?}", e);
+                    Error::Curl(e)
+                })?
+                .map(|content_type| {
+                    Ok(vec![(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str(content_type).map_err(|err| {
+                            trace!("{:?}", err);
+                            Error::Http(err.to_string())
+                        })?,
+                    )]
+                    .into_iter()
+                    .collect::<HeaderMap>())
+                })
+                .transpose()?
+                .unwrap_or_else(HeaderMap::new);
+
+            let content_length = easy.content_length_download().map_err(|e| {
                 trace!("{:?}", e);
                 Error::Curl(e)
-            })?
-            .map(|content_type| {
-                Ok(vec![(
-                    CONTENT_TYPE,
-                    HeaderValue::from_str(content_type).map_err(|err| {
-                        trace!("{:?}", err);
-                        Error::Http(err.to_string())
-                    })?,
-                )]
-                .into_iter()
-                .collect::<HeaderMap>())
-            })
-            .transpose()?
-            .unwrap_or_else(HeaderMap::new);
+            })?;
 
-        let content_length = easy.content_length_download().map_err(|e| {
-            trace!("{:?}", e);
-            Error::Curl(e)
-        })?;
+            response_header.insert(
+                CONTENT_LENGTH,
+                HeaderValue::from_str(content_length.to_string().as_str()).map_err(|err| {
+                    trace!("{:?}", err);
+                    Error::Http(err.to_string())
+                })?,
+            );
 
-        response_header.insert(
-            CONTENT_LENGTH,
-            HeaderValue::from_str(content_length.to_string().as_str()).map_err(|err| {
-                trace!("{:?}", err);
-                Error::Http(err.to_string())
-            })?,
-        );
+            response_header
+        };
 
         Ok(HttpResponse {
             status_code: StatusCode::from_u16(status_code).map_err(|err| {
