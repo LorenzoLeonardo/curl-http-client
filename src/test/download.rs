@@ -55,7 +55,7 @@ async fn test_download_with_speed_control() {
         body: None,
     };
     let response = HttpClient::new(curl, collector)
-        .download_speed(BytesPerSec::from(4000000))
+        .download_speed(BytesPerSec::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()
@@ -136,7 +136,7 @@ async fn test_download_with_transfer_speed_sender() {
     });
 
     let response = HttpClient::new(curl, collector)
-        .download_speed(BytesPerSec::from(4000000))
+        .download_speed(BytesPerSec::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()
