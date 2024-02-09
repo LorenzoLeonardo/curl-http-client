@@ -23,7 +23,7 @@ async fn test_with_complete_headers_ram_and_header() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let mut response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(curl, collector)
         .request(request)
         .unwrap()
         .send_request()
@@ -56,7 +56,7 @@ async fn test_with_complete_headers_file_and_headers() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let mut response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(curl, collector)
         .request(request)
         .unwrap()
         .send_request()
@@ -89,7 +89,7 @@ async fn test_with_complete_headers_ram() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let mut response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(curl, collector)
         .request(request)
         .unwrap()
         .send_request()
@@ -122,7 +122,7 @@ async fn test_with_complete_headers_file() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let mut response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(curl, collector)
         .request(request)
         .unwrap()
         .send_request()

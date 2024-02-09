@@ -807,7 +807,7 @@ where
     /// This becomes a non-blocking I/O since the actual perform operation is done
     /// at the actor side.
     pub async fn perform(self) -> Result<HttpResponse, Error<C>> {
-        let mut easy = self.send_request().await?;
+        let easy = self.send_request().await?;
 
         let (data, headers) = easy.get_ref().get_response_body_and_headers();
         let status_code = easy.response_code().map_err(|e| {
