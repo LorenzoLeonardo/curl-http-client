@@ -40,6 +40,7 @@ async fn test_upload() {
     println!("Response: {:?}", response);
     assert_eq!(response.status_code, StatusCode::OK);
     assert_eq!(response.body, None);
+    assert!(!response.headers.is_empty());
 }
 
 #[tokio::test]
@@ -74,6 +75,7 @@ async fn test_upload_with_speed_control() {
     println!("Response: {:?}", response);
     assert_eq!(response.status_code, StatusCode::OK);
     assert_eq!(response.body, None);
+    assert!(!response.headers.is_empty());
 }
 
 #[tokio::test]
@@ -120,6 +122,40 @@ async fn test_upload_with_transfer_speed_sender() {
     println!("Response: {:?}", response);
     assert_eq!(response.status_code, StatusCode::OK);
     assert_eq!(response.body, None);
+    assert!(!response.headers.is_empty());
 
     handle.abort();
+}
+
+#[tokio::test]
+async fn test_upload_with_headers() {
+    let responder = MockResponder::new(ResponderType::File);
+    let (server, tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let to_be_uploaded = tempdir.path().join("file_to_be_uploaded.jpg");
+    fs::write(to_be_uploaded.as_path(), include_bytes!("sample.jpg")).unwrap();
+    let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
+
+    let curl = CurlActor::new();
+    let collector = Collector::FileAndHeaders(FileInfo::path(to_be_uploaded), Vec::new());
+    let request = HttpRequest {
+        url: target_url,
+        method: Method::PUT,
+        headers: HeaderMap::new(),
+        body: None,
+    };
+    let response = HttpClient::new(curl, collector)
+        .upload_file_size(FileSize::from(file_size))
+        .unwrap()
+        .request(request)
+        .unwrap()
+        .perform()
+        .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    assert_eq!(response.status_code, StatusCode::OK);
+    assert_eq!(response.body, None);
+    assert!(!response.headers.is_empty());
 }

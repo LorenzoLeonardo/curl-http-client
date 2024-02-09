@@ -31,4 +31,32 @@ async fn test_post() {
     println!("Response: {:?}", response);
     assert_eq!(response.status_code, StatusCode::OK);
     assert_eq!(response.body.unwrap().len(), 0);
+    assert!(!response.headers.is_empty());
+}
+
+#[tokio::test]
+async fn test_post_with_headers() {
+    let responder = MockResponder::new(ResponderType::Body("test body".as_bytes().to_vec()));
+    let (server, _tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let curl = CurlActor::new();
+    let collector = Collector::RamAndHeaders(Vec::new(), Vec::new());
+    let request = HttpRequest {
+        url: target_url,
+        method: Method::POST,
+        headers: HeaderMap::new(),
+        body: Some("test body".as_bytes().to_vec()),
+    };
+    let response = HttpClient::new(curl, collector)
+        .request(request)
+        .unwrap()
+        .perform()
+        .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    assert_eq!(response.status_code, StatusCode::OK);
+    assert_eq!(response.body.unwrap().len(), 0);
+    assert!(!response.headers.is_empty());
 }
