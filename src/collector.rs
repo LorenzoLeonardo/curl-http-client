@@ -133,12 +133,14 @@ pub trait ExtendedHandler: Handler {
 /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
 #[derive(Clone, Debug)]
 pub enum Collector {
-    /// Collector::File(FileInfo) is useful to be able to download and upload files.
+    /// Collector::File(FileInfo) is used to be able to download and upload files.
     File(FileInfo),
     /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
     Ram(Vec<u8>),
-    /// Collector::RamWithHeaders(`Vec<u8>`, `Vec<u8>`) is used to store response body into Memory and with complete Headers.
+    /// Collector::RamWithHeaders(`Vec<u8>`, `Vec<u8>`) is used to store response body into Memory and with complete headers.
     RamAndHeaders(Vec<u8>, Vec<u8>),
+    /// Collector::FileAndHeaders(`Vec<u8>`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
+    FileAndHeaders(FileInfo, Vec<u8>),
 }
 
 impl Handler for Collector {
@@ -175,6 +177,26 @@ impl Handler for Collector {
                 container.extend_from_slice(data);
                 Ok(data.len())
             }
+            Collector::FileAndHeaders(info, _) => {
+                let mut file = OpenOptions::new()
+                    .create(true)
+                    .append(true)
+                    .open(info.path.clone())
+                    .map_err(|e| {
+                        trace!("{}", e);
+                        WriteError::Pause
+                    })?;
+
+                file.write_all(data).map_err(|e| {
+                    trace!("{}", e);
+                    WriteError::Pause
+                })?;
+
+                info.update_bytes_transferred(data.len());
+
+                send_transfer_info(info);
+                Ok(data.len())
+            }
         }
     }
     /// This will read the chunks of data from a file that will be uploaded
@@ -205,6 +227,28 @@ impl Handler for Collector {
             }
             Collector::Ram(_) => Ok(0),
             Collector::RamAndHeaders(_, _) => Ok(0),
+            Collector::FileAndHeaders(info, _) => {
+                let mut file = File::open(info.path.clone()).map_err(|e| {
+                    trace!("{}", e);
+                    ReadError::Abort
+                })?;
+
+                file.seek(SeekFrom::Start(info.bytes_transferred() as u64))
+                    .map_err(|e| {
+                        trace!("{}", e);
+                        ReadError::Abort
+                    })?;
+
+                let read_size = file.read(data).map_err(|e| {
+                    trace!("{}", e);
+                    ReadError::Abort
+                })?;
+
+                info.update_bytes_transferred(read_size);
+
+                send_transfer_info(info);
+                Ok(read_size)
+            }
         }
     }
 
@@ -213,6 +257,9 @@ impl Handler for Collector {
             Collector::File(_) => {}
             Collector::Ram(_) => {}
             Collector::RamAndHeaders(_, headers) => {
+                headers.extend_from_slice(data);
+            }
+            Collector::FileAndHeaders(_, headers) => {
                 headers.extend_from_slice(data);
             }
         }
@@ -230,13 +277,14 @@ impl ExtendedHandler for Collector {
             Collector::File(_) => None,
             Collector::Ram(container) => Some(container.clone()),
             Collector::RamAndHeaders(container, _) => Some(container.clone()),
+            Collector::FileAndHeaders(_, _) => None,
         }
     }
 
-    /// If Collector::File(FileInfo) is set, there will be no response body since the response
-    /// will be stored into a file.
-    ///
-    /// If Collector::RamAndHeaders(`Vec<u8>`, `Vec<u8>`) is set, the response body and complete header can be obtain here.
+    /// If Collector::File(`FileInfo`) is set, there will be no response body since the response will be stored into a file.
+    /// If Collector::Ram(`Vec<u8>`) is set, the response body can be obtain here.
+    /// If Collector::RamAndHeaders(`Vec<u8>`, `Vec<u8>`) is set, the response body and the complete headers are generated.
+    /// If Collector::FileAndHeaders(`FileInfo`, `Vec<u8>`) is set, there will be no response body since the response will be stored into a file but a complete headers are generated.
     fn get_response_body_and_headers(&self) -> (Option<Vec<u8>>, Option<HeaderMap>) {
         match self {
             Collector::File(_) => (None, None),
@@ -249,7 +297,7 @@ impl ExtendedHandler for Collector {
                     // Split each line into key-value pairs
                     if let Some((key, value)) = line.split_once(": ").to_owned() {
                         if let Ok(header_name) = HeaderName::from_bytes(key.as_bytes()) {
-                            if let Ok(header_value) = HeaderValue::from_str(&value) {
+                            if let Ok(header_value) = HeaderValue::from_str(value) {
                                 // Insert the key-value pair into the HeaderMap
                                 header_map.insert(header_name, header_value);
                             }
@@ -257,6 +305,23 @@ impl ExtendedHandler for Collector {
                     }
                 }
                 (Some(container.clone()), Some(header_map))
+            }
+            Collector::FileAndHeaders(_, headers) => {
+                let header_str = std::str::from_utf8(headers).unwrap();
+                let mut header_map = HeaderMap::new();
+
+                for line in header_str.lines() {
+                    // Split each line into key-value pairs
+                    if let Some((key, value)) = line.split_once(": ").to_owned() {
+                        if let Ok(header_name) = HeaderName::from_bytes(key.as_bytes()) {
+                            if let Ok(header_value) = HeaderValue::from_str(value) {
+                                // Insert the key-value pair into the HeaderMap
+                                header_map.insert(header_name, header_value);
+                            }
+                        }
+                    }
+                }
+                (None, Some(header_map))
             }
         }
     }
