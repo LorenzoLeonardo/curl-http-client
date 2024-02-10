@@ -4,6 +4,10 @@ This is a wrapper for Easy2 from curl-rust crate for ergonomic use
 and is able to perform asynchronously using async-curl crate
 that uses an actor model (Message passing) to achieve a non-blocking I/O.
 
+[![Latest Version](https://img.shields.io/crates/v/curl-http-client.svg)](https://crates.io/crates/curl-http-client)
+[![License](https://img.shields.io/github/license/LorenzoLeonardo/curl-http-client.svg)](LICENSE-MIT)
+[![Documentation](https://docs.rs/curl-http-client/badge.svg)](https://docs.rs/curl-http-client)
+[![Build Status](https://github.com/LorenzoLeonardo/curl-http-client/workflows/Rust/badge.svg)](https://github.com/LorenzoLeonardo/curl-http-client/actions)
 
 ## Get Request
 ```rust
