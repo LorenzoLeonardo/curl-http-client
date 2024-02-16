@@ -13,10 +13,12 @@ use crate::{
     collector::ExtendedHandler, error::Error, request::HttpRequest, response::HttpResponse,
 };
 
-/// A type-state struct in building the HttpClient.
+/// Proceed to building state
 pub struct Build;
-/// A type-state struct in building the HttpClient.
-pub struct Perform;
+/// Proceed to perform async state
+pub struct PerformAsync;
+/// Proceed to perform sync state
+pub struct PerformSync;
 
 /// The HTTP Client struct that wraps curl Easy2.
 pub struct HttpClient<C, S>
@@ -26,11 +28,11 @@ where
     /// This is the the actor handler that can be cloned to be able to handle multiple request sender
     /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
     /// non-blocking I/O during curl perform.
-    curl: CurlActor<C>,
+    actor: Option<CurlActor<C>>,
     /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
     /// asynchronous task during perform operation.
     easy: Easy2<C>,
-    /// This is a type-state builder pattern to help programmers not to mis-used when building curl options before perform
+    /// This is a type-state builder pattern to help programmers not to mis-use when building curl options before perform
     /// operation.
     _state: S,
 }
@@ -41,17 +43,35 @@ where
 {
     /// Creates a new HTTP Client.
     ///
-    /// The [`CurlActor`](https://docs.rs/async-curl/latest/async_curl/actor/struct.CurlActor.html) is the actor handler that can be cloned to be able to handle multiple request sender
-    /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
-    /// non-blocking I/O during curl perform.
-    ///
     /// The C is a generic type to be able to implement a custom HTTP response collector whoever uses this crate.
     /// There is a built-in [`Collector`](https://docs.rs/curl-http-client/latest/curl_http_client/collector/enum.Collector.html) in this crate that can be used store HTTP response body into memory or in a File.
-    pub fn new(curl: CurlActor<C>, collector: C) -> Self {
+    pub fn new(collector: C) -> Self {
         Self {
-            curl,
+            actor: None,
             easy: Easy2::new(collector),
             _state: Build,
+        }
+    }
+
+    /// This marks the end of the curl builder to be able to do asynchronous operation during perform.
+    ///
+    /// The [`CurlActor`](https://docs.rs/async-curl/latest/async_curl/actor/struct.CurlActor.html) is the actor handler that can be cloned
+    /// to be able to handle multiple request sender and a single consumer that is spawned in the background to be able to achieve
+    /// non-blocking I/O during curl perform.
+    pub fn nonblocking(self, actor: CurlActor<C>) -> HttpClient<C, PerformAsync> {
+        HttpClient::<C, PerformAsync> {
+            actor: Some(actor),
+            easy: self.easy,
+            _state: PerformAsync,
+        }
+    }
+
+    /// This marks the end of the curl builder to be able to do synchronous operation during perform.
+    pub fn blocking(self) -> HttpClient<C, PerformSync> {
+        HttpClient::<C, PerformSync> {
+            actor: None,
+            easy: self.easy,
+            _state: PerformSync,
         }
     }
 
@@ -59,7 +79,7 @@ where
     ///
     /// The HttpRequest can be customized by the caller by setting the Url, Method Type,
     /// Headers and the Body.
-    pub fn request(mut self, request: HttpRequest) -> Result<HttpClient<C, Perform>, Error<C>> {
+    pub fn request(mut self, request: HttpRequest) -> Result<Self, Error<C>> {
         self.easy.url(&request.url.to_string()[..]).map_err(|e| {
             trace!("{:?}", e);
             Error::Curl(e)
@@ -113,11 +133,7 @@ where
                 unimplemented!();
             }
         }
-        Ok(HttpClient::<C, Perform> {
-            curl: self.curl,
-            easy: self.easy,
-            _state: Perform,
-        })
+        Ok(self)
     }
 
     /// Set a point to resume transfer from
@@ -788,24 +804,29 @@ where
     }
 }
 
-impl<C> HttpClient<C, Perform>
+impl<C> HttpClient<C, PerformAsync>
 where
     C: ExtendedHandler + std::fmt::Debug + Send,
 {
     /// This will send the request asynchronously,
     /// and return the underlying [`Easy2<C>`](https://docs.rs/curl/latest/curl/easy/struct.Easy2.html) useful if you
     /// want to decide how to transform the response yourself.
+    ///
+    /// This becomes a non-blocking I/O since the actual perform operation is done
+    /// at the actor side using Curl-Multi.
     pub async fn send_request(self) -> Result<Easy2<C>, Error<C>> {
-        let easy = self.curl.send_request(self.easy).await.map_err(|e| {
-            trace!("{:?}", e);
-            Error::Perform(e)
-        })?;
-        Ok(easy)
+        if let Some(actor) = self.actor {
+            let easy = actor.send_request(self.easy).await.map_err(|e| {
+                trace!("{:?}", e);
+                Error::Perform(e)
+            })?;
+            Ok(easy)
+        } else {
+            panic!("No actor was set!!!");
+        }
     }
 
     /// This will perform the curl operation asynchronously.
-    /// This becomes a non-blocking I/O since the actual perform operation is done
-    /// at the actor side.
     pub async fn perform(self) -> Result<HttpResponse, Error<C>> {
         let easy = self.send_request().await?;
 
@@ -865,6 +886,81 @@ where
     }
 }
 
+impl<C> HttpClient<C, PerformSync>
+where
+    C: ExtendedHandler + std::fmt::Debug + Send,
+{
+    /// This will send the request synchronously,
+    /// and return the underlying [`Easy2<C>`](https://docs.rs/curl/latest/curl/easy/struct.Easy2.html) useful if you
+    /// want to decide how to transform the response yourself.
+    pub fn send_request(self) -> Result<Easy2<C>, Error<C>> {
+        self.easy.perform().map_err(|e| {
+            trace!("{:?}", e);
+            Error::Perform(async_curl::error::Error::Curl(e))
+        })?;
+
+        Ok(self.easy)
+    }
+
+    /// This will perform the curl operation synchronously.
+    pub fn perform(self) -> Result<HttpResponse, Error<C>> {
+        let easy = self.send_request()?;
+
+        let (data, headers) = easy.get_ref().get_response_body_and_headers();
+        let status_code = easy.response_code().map_err(|e| {
+            trace!("{:?}", e);
+            Error::Curl(e)
+        })? as u16;
+
+        let response_header = if let Some(response_header) = headers {
+            response_header
+        } else {
+            let mut response_header = easy
+                .content_type()
+                .map_err(|e| {
+                    trace!("{:?}", e);
+                    Error::Curl(e)
+                })?
+                .map(|content_type| {
+                    Ok(vec![(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str(content_type).map_err(|err| {
+                            trace!("{:?}", err);
+                            Error::Http(err.to_string())
+                        })?,
+                    )]
+                    .into_iter()
+                    .collect::<HeaderMap>())
+                })
+                .transpose()?
+                .unwrap_or_else(HeaderMap::new);
+
+            let content_length = easy.content_length_download().map_err(|e| {
+                trace!("{:?}", e);
+                Error::Curl(e)
+            })?;
+
+            response_header.insert(
+                CONTENT_LENGTH,
+                HeaderValue::from_str(content_length.to_string().as_str()).map_err(|err| {
+                    trace!("{:?}", err);
+                    Error::Http(err.to_string())
+                })?,
+            );
+
+            response_header
+        };
+
+        Ok(HttpResponse {
+            status_code: StatusCode::from_u16(status_code).map_err(|err| {
+                trace!("{:?}", err);
+                Error::Http(err.to_string())
+            })?,
+            headers: response_header,
+            body: data,
+        })
+    }
+}
 /// A strong type unit when setting download speed and upload speed
 /// in bytes per second.
 #[derive(Deref)]

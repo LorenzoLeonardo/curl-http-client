@@ -18,7 +18,7 @@ async fn test_download() {
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
@@ -26,9 +26,10 @@ async fn test_download() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -47,7 +48,7 @@ async fn test_download_with_speed_control() {
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
@@ -55,11 +56,12 @@ async fn test_download_with_speed_control() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .download_speed(BytesPerSec::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -87,7 +89,7 @@ async fn test_resume_download(offset: usize, expected_status_code: StatusCode) {
 
     let partial_file_size = fs::metadata(save_to.as_path()).unwrap().len() as usize;
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
     let request = HttpRequest {
         url: target_url,
@@ -95,11 +97,12 @@ async fn test_resume_download(offset: usize, expected_status_code: StatusCode) {
         headers: HeaderMap::new(),
         body: None,
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .resume_from(BytesOffset::from(partial_file_size))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -119,7 +122,7 @@ async fn test_download_with_transfer_speed_sender() {
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
 
     let (tx, mut rx) = channel(1);
 
@@ -138,11 +141,12 @@ async fn test_download_with_transfer_speed_sender() {
         }
     });
 
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .download_speed(BytesPerSec::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -163,7 +167,7 @@ async fn test_download_with_headers() {
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
     let save_to = tempdir.path().join("downloaded_file.jpg");
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::FileAndHeaders(FileInfo::path(save_to.clone()), Vec::new());
     let request = HttpRequest {
         url: target_url,
@@ -171,9 +175,10 @@ async fn test_download_with_headers() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();

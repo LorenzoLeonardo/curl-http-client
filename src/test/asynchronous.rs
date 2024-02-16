@@ -30,9 +30,10 @@ async fn test_across_multiple_threads() {
         let collector = collector.clone();
         let request = request.clone();
         let handle = tokio::spawn(async move {
-            let response = HttpClient::new(curl, collector)
+            let response = HttpClient::new(collector)
                 .request(request)
                 .unwrap()
+                .nonblocking(curl)
                 .perform()
                 .await
                 .unwrap();
