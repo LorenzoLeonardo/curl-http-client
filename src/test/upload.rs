@@ -20,7 +20,7 @@ async fn test_upload() {
     fs::write(to_be_uploaded.as_path(), include_bytes!("sample.jpg")).unwrap();
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(to_be_uploaded));
     let request = HttpRequest {
         url: target_url,
@@ -28,11 +28,12 @@ async fn test_upload() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -53,7 +54,7 @@ async fn test_upload_with_speed_control() {
     fs::write(to_be_uploaded.clone(), include_bytes!("sample.jpg")).unwrap();
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(to_be_uploaded));
     let request = HttpRequest {
         url: target_url,
@@ -61,13 +62,14 @@ async fn test_upload_with_speed_control() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
         .upload_speed(BytesPerSec::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -89,7 +91,7 @@ async fn test_upload_with_transfer_speed_sender() {
 
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
 
     let (tx, mut rx) = channel(1);
 
@@ -108,13 +110,14 @@ async fn test_upload_with_transfer_speed_sender() {
         }
     });
 
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
         .upload_speed(BytesPerSec::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -137,7 +140,7 @@ async fn test_upload_with_headers() {
     fs::write(to_be_uploaded.as_path(), include_bytes!("sample.jpg")).unwrap();
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::FileAndHeaders(FileInfo::path(to_be_uploaded), Vec::new());
     let request = HttpRequest {
         url: target_url,
@@ -145,13 +148,46 @@ async fn test_upload_with_headers() {
         headers: HeaderMap::new(),
         body: None,
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    assert_eq!(response.status_code, StatusCode::OK);
+    assert_eq!(response.body, None);
+    assert!(!response.headers.is_empty());
+}
+
+#[tokio::test]
+async fn test_upload_sync() {
+    let responder = MockResponder::new(ResponderType::File);
+    let (server, tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let to_be_uploaded = tempdir.path().join("file_to_be_uploaded.jpg");
+    fs::write(to_be_uploaded.as_path(), include_bytes!("sample.jpg")).unwrap();
+    let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
+
+    let collector = Collector::File(FileInfo::path(to_be_uploaded));
+    let request = HttpRequest {
+        url: target_url,
+        method: Method::PUT,
+        headers: HeaderMap::new(),
+        body: None,
+    };
+    let response = HttpClient::new(collector)
+        .upload_file_size(FileSize::from(file_size))
+        .unwrap()
+        .request(request)
+        .unwrap()
+        .blocking()
+        .perform()
         .unwrap();
 
     println!("Response: {:?}", response);

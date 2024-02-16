@@ -12,7 +12,7 @@ use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let save_to = PathBuf::from("<FILE PATH TO SAVE>");
     let collector = Collector::File(FileInfo::path(save_to.clone()));
 
@@ -24,11 +24,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         body: None,
     };
 
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .resume_from(BytesOffset::from(partial_download_file_size))
         .unwrap()
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();

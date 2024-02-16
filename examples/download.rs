@@ -11,7 +11,7 @@ use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
 
     let collector = Collector::File(FileInfo::path(PathBuf::from("<FILE PATH TO SAVE>")));
 
@@ -22,9 +22,10 @@ async fn main() {
         body: None,
     };
 
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();

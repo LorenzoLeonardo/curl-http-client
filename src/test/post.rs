@@ -13,7 +13,7 @@ async fn test_post() {
     let (server, _tempdir) = setup_test_environment(responder).await;
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
     let request = HttpRequest {
         url: target_url,
@@ -21,9 +21,10 @@ async fn test_post() {
         headers: HeaderMap::new(),
         body: Some("test body".as_bytes().to_vec()),
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();
@@ -40,7 +41,7 @@ async fn test_post_with_headers() {
     let (server, _tempdir) = setup_test_environment(responder).await;
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::RamAndHeaders(Vec::new(), Vec::new());
     let request = HttpRequest {
         url: target_url,
@@ -48,11 +49,38 @@ async fn test_post_with_headers() {
         headers: HeaderMap::new(),
         body: Some("test body".as_bytes().to_vec()),
     };
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    assert_eq!(response.status_code, StatusCode::OK);
+    assert_eq!(response.body.unwrap().len(), 0);
+    assert!(!response.headers.is_empty());
+}
+
+#[tokio::test]
+async fn test_post_sync() {
+    let responder = MockResponder::new(ResponderType::Body("test body".as_bytes().to_vec()));
+    let (server, _tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let collector = Collector::Ram(Vec::new());
+    let request = HttpRequest {
+        url: target_url,
+        method: Method::POST,
+        headers: HeaderMap::new(),
+        body: Some("test body".as_bytes().to_vec()),
+    };
+    let response = HttpClient::new(collector)
+        .request(request)
+        .unwrap()
+        .blocking()
+        .perform()
         .unwrap();
 
     println!("Response: {:?}", response);

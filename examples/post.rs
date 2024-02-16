@@ -5,7 +5,7 @@ use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let curl = CurlActor::new();
+    let actor = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
 
     let request = HttpRequest {
@@ -15,9 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         body: Some("test body".as_bytes().to_vec()),
     };
 
-    let response = HttpClient::new(curl, collector)
+    let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
+        .nonblocking(actor)
         .perform()
         .await
         .unwrap();

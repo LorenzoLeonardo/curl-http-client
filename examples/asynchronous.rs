@@ -12,7 +12,7 @@ async fn main() {
     let mut handles = Vec::new();
 
     for _n in 0..NUM_CONCURRENT {
-        let curl = curl.clone();
+        let actor = curl.clone();
 
         let handle = tokio::spawn(async move {
             let collector = Collector::Ram(Vec::new());
@@ -23,9 +23,10 @@ async fn main() {
                 body: None,
             };
 
-            let response = HttpClient::new(curl, collector)
+            let response = HttpClient::new(collector)
                 .request(request)
                 .unwrap()
+                .nonblocking(actor)
                 .perform()
                 .await
                 .unwrap();
