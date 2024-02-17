@@ -411,7 +411,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let response = HttpClient::new(collector)
         .request(request)?
-        .blocking(actor)
+        .blocking()
         .perform()?;
 
     println!("Response: {:?}", response);
