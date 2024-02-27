@@ -14,60 +14,55 @@ that uses an actor model (Message passing) to achieve a non-blocking I/O.
 ## Get Request
 ```rust
 use async_curl::actor::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-use http::{HeaderMap, Method};
+use curl_http_client::{collector::Collector, http_client::HttpClient};
+use http::{Method, Request};
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let actor = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
 
-    let request = HttpRequest {
-        url: Url::parse("<SOURCE URL>")?,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri("<SOURCE URL>")
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
-        .request(request)?
+        .request(request).unwrap()
         .nonblocking(actor)
         .perform()
-        .await?;
-
+        .await.unwrap();
     println!("Response: {:?}", response);
-    Ok(())
 }
 ```
 
 ## Post Request
 ```rust
 use async_curl::actor::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-use http::{HeaderMap, Method};
+use curl_http_client::{collector::Collector, http_client::HttpClient};
+use http::{Method, Request};
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let actor = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
 
-    let request = HttpRequest {
-        url: Url::parse("<TARGET URL>")?,
-        method: Method::POST,
-        headers: HeaderMap::new(),
-        body: Some("test body".as_bytes().to_vec()),
-    };
+    let request = Request::builder()
+        .uri("<TARGET URL>")
+        .method(Method::POST)
+        .body(Some("test body".as_bytes().to_vec()))
+        .unwrap();
 
     let response = HttpClient::new(collector)
-        .request(request)?
+        .request(request).unwrap()
         .nonblocking(actor)
         .perform()
-        .await?;
+        .await.unwrap();
 
     println!("Response: {:?}", response);
-    Ok(())
 }
 ```
 
@@ -79,9 +74,8 @@ use async_curl::actor::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::HttpClient,
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
+use http::{Method, Request};
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
@@ -90,18 +84,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let collector = Collector::File(FileInfo::path(PathBuf::from("<FILE PATH TO SAVE>")));
 
-    let request = HttpRequest {
-        url: Url::parse("<SOURCE URL>")?,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri("<SOURCE URL>")
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
-        .request(request)?
+        .request(request)
+        .unwrap()
         .nonblocking(actor)
         .perform()
-        .await?;
+        .await.unwrap();
 
     println!("Response: {:?}", response);
     Ok(())
@@ -116,44 +110,41 @@ use async_curl::actor::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{FileSize, HttpClient},
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Request};
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let file_to_be_uploaded = PathBuf::from("<FILE PATH TO BE UPLOADED>");
     let file_size = fs::metadata(file_to_be_uploaded.as_path()).unwrap().len() as usize;
 
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(file_to_be_uploaded));
 
-    let request = HttpRequest {
-        url: Url::parse("<TARGET URL>")?,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri("<TARGET URL>")
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
-        .upload_file_size(FileSize::from(file_size))?
-        .request(request)?
+        .upload_file_size(FileSize::from(file_size)).unwrap()
+        .request(request).unwrap()
         .nonblocking(actor)
         .perform()
-        .await?;
+        .await.unwrap();
 
     println!("Response: {:?}", response);
-    Ok(())
 }
 ```
 
 ## Concurrency
 ```rust
 use async_curl::actor::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
+use curl_http_client::{collector::Collector, http_client::HttpClient};
 use futures::future;
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Request};
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
@@ -168,12 +159,11 @@ async fn main() {
 
         let handle = tokio::spawn(async move {
             let collector = Collector::Ram(Vec::new());
-            let request = HttpRequest {
-                url: Url::parse("https://www.rust-lang.org/").unwrap(),
-                method: Method::GET,
-                headers: HeaderMap::new(),
-                body: None,
-            };
+            let request = Request::builder()
+                .uri("https://www.rust-lang.org/")
+                .method(Method::GET)
+                .body(None)
+                .unwrap();
 
             let response = HttpClient::new(collector)
                 .request(request)
@@ -204,33 +194,31 @@ use async_curl::actor::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{BytesOffset, HttpClient},
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Request};
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let actor = CurlActor::new();
     let save_to = PathBuf::from("<FILE PATH TO SAVE>");
     let collector = Collector::File(FileInfo::path(save_to.clone()));
 
-    let partial_download_file_size = fs::metadata(save_to.as_path())?.len() as usize;
-    let request = HttpRequest {
-        url: Url::parse("<SOURCE URL>")?,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let partial_download_file_size = fs::metadata(save_to.as_path()).unwrap().len() as usize;
+    let request = Request::builder()
+        .uri("<SOURCE URL>")
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
-        .resume_from(BytesOffset::from(partial_download_file_size))?
-        .request(request)?
+        .resume_from(BytesOffset::from(partial_download_file_size)).unwrap()
+        .request(request).unwrap()
         .nonblocking(actor)
         .perform()
-        .await?;
+        .await.unwrap();
+
     println!("Response: {:?}", response);
-    Ok(())
 }
 ```
 
@@ -242,14 +230,13 @@ use async_curl::actor::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::HttpClient,
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Request};
 use tokio::sync::mpsc::channel;
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let (tx, mut rx) = channel(1);
 
     let actor = CurlActor::new();
@@ -262,23 +249,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let request = HttpRequest {
-        url: Url::parse("<SOURCE URL>")?,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri("<SOURCE URL>")
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
-        .request(request)?
+        .request(request).unwrap()
         .nonblocking(actor)
         .perform()
-        .await?;
+        .await.unwrap();
 
     println!("Response: {:?}", response);
 
     handle.abort();
-    Ok(())
 }
 ```
 
@@ -290,14 +275,13 @@ use async_curl::actor::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{FileSize, HttpClient},
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Request};
 use tokio::sync::mpsc::channel;
 use url::Url;
 
 #[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() {
     let (tx, mut rx) = channel(1);
 
     let file_to_be_uploaded = PathBuf::from("<FILE PATH TO BE UPLOADED>");
@@ -313,23 +297,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    let request = HttpRequest {
-        url: Url::parse("<TARGET URL>")?,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri("<TARGET URL>")
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
-        .upload_file_size(FileSize::from(file_size))?
-        .request(request)?
+        .upload_file_size(FileSize::from(file_size)).unwrap()
+        .request(request).unwrap()
         .nonblocking(actor)
         .perform()
-        .await?;
+        .await.unwrap();
 
     println!("Response: {:?}", response);
     handle.abort();
-    Ok(())
 }
 ```
 
@@ -337,19 +319,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Get Request
 ```rust
-use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-use http::{HeaderMap, Method};
+use curl_http_client::{collector::Collector, http_client::HttpClient};
+use http::{HeaderMap, Method, Request};
 use url::Url;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let collector = Collector::Ram(Vec::new());
 
-    let request = HttpRequest {
-        url: Url::parse("<SOURCE URL>")?,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+let request = Request::builder()
+    .uri("<SOURCE URL>")
+    .method(Method::GET)
+    .body(None)
+    .unwrap();
 
     let response = HttpClient::new(collector)
         .request(request)?
@@ -363,19 +344,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Post Request
 ```rust
-use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-use http::{HeaderMap, Method};
+use curl_http_client::{collector::Collector, http_client::HttpClient};
+use http::{HeaderMap, Method, Request};
 use url::Url;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let collector = Collector::Ram(Vec::new());
 
-    let request = HttpRequest {
-        url: Url::parse("<TARGET URL>")?,
-        method: Method::POST,
-        headers: HeaderMap::new(),
-        body: Some("test body".as_bytes().to_vec()),
-    };
+let request = Request::builder()
+    .uri("<TARGET URL>")
+    .method(Method::POST)
+    .body(Some("test body".as_bytes().to_vec()))
+    .unwrap();
 
     let response = HttpClient::new(collector)
         .request(request)?
@@ -394,20 +374,18 @@ use std::path::PathBuf;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::HttpClient,
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Request};
 use url::Url;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let collector = Collector::File(FileInfo::path(PathBuf::from("<FILE PATH TO SAVE>")));
 
-    let request = HttpRequest {
-        url: Url::parse("<SOURCE URL>")?,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+let request = Request::builder()
+    .uri("<SOURCE URL>")
+    .method(Method::GET)
+    .body(None)
+    .unwrap();
 
     let response = HttpClient::new(collector)
         .request(request)?
@@ -426,9 +404,8 @@ use std::{fs, path::PathBuf};
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{FileSize, HttpClient},
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
+use http::{HeaderMap, Method, Request};
 use url::Url;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -437,12 +414,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let collector = Collector::File(FileInfo::path(file_to_be_uploaded));
 
-    let request = HttpRequest {
-        url: Url::parse("<TARGET URL>")?,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+let request = Request::builder()
+    .uri("<TARGET URL>")
+    .method(Method::PUT)
+    .body(None)
+    .unwrap();
 
     let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))?

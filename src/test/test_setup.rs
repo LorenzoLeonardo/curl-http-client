@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use http::StatusCode;
+use http_types::StatusCode;
 use tempfile::TempDir;
 use wiremock::{
     http::{HeaderName, HeaderValue, HeaderValues, Method},
@@ -45,7 +45,7 @@ impl Respond for MockResponder {
                         );
                         println!("Content-Range: {}", content_range);
 
-                        ResponseTemplate::new(StatusCode::PARTIAL_CONTENT)
+                        ResponseTemplate::new(StatusCode::PartialContent)
                             .append_header(
                                 HeaderName::from_str("Content-Range").unwrap(),
                                 HeaderValue::from_str(content_range.as_str()).unwrap(),
@@ -61,28 +61,28 @@ impl Respond for MockResponder {
                             .set_body_bytes(&mock_file[offset..])
                     } else {
                         let contents = include_bytes!("sample.jpg");
-                        ResponseTemplate::new(StatusCode::OK).set_body_bytes(contents.as_slice())
+                        ResponseTemplate::new(StatusCode::Ok).set_body_bytes(contents.as_slice())
                     }
                 }
                 ResponderType::Body(body) => {
-                    ResponseTemplate::new(StatusCode::OK).set_body_bytes(body.as_slice())
+                    ResponseTemplate::new(StatusCode::Ok).set_body_bytes(body.as_slice())
                 }
             },
             Method::Post => match &self.responder {
-                ResponderType::File => ResponseTemplate::new(StatusCode::OK),
+                ResponderType::File => ResponseTemplate::new(StatusCode::Ok),
                 ResponderType::Body(body) => {
                     assert_eq!(*body, request.body);
-                    ResponseTemplate::new(StatusCode::OK)
+                    ResponseTemplate::new(StatusCode::Ok)
                 }
             },
             Method::Put => match &self.responder {
                 ResponderType::File => {
                     assert_eq!(include_bytes!("sample.jpg").to_vec(), request.body);
-                    ResponseTemplate::new(StatusCode::OK)
+                    ResponseTemplate::new(StatusCode::Ok)
                 }
                 ResponderType::Body(body) => {
                     assert_eq!(*body, request.body);
-                    ResponseTemplate::new(StatusCode::OK)
+                    ResponseTemplate::new(StatusCode::Ok)
                 }
             },
             _ => {

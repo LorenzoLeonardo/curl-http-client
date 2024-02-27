@@ -1,12 +1,11 @@
 use std::fs;
 
 use async_curl::actor::CurlActor;
-use http::{HeaderMap, Method};
+use http::{Method, Request};
 use url::Url;
 
 use crate::collector::{Collector, ExtendedHandler, FileInfo};
 use crate::http_client::HttpClient;
-use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
 #[tokio::test]
@@ -17,12 +16,12 @@ async fn test_with_complete_headers_ram_and_header() {
 
     let actor = CurlActor::new();
     let collector = Collector::RamAndHeaders(Vec::new(), Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -51,12 +50,12 @@ async fn test_with_complete_headers_file_and_headers() {
     let save_to = tempdir.path().join("downloaded_file.jpg");
     let actor = CurlActor::new();
     let collector = Collector::FileAndHeaders(FileInfo::path(save_to.clone()), Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -85,12 +84,12 @@ async fn test_with_complete_headers_ram() {
 
     let actor = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -119,12 +118,12 @@ async fn test_with_complete_headers_file() {
     let save_to = tempdir.path().join("downloaded_file.jpg");
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -152,12 +151,12 @@ async fn test_with_complete_headers_ram_and_header_sync() {
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
     let collector = Collector::RamAndHeaders(Vec::new(), Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()

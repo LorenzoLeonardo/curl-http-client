@@ -4,10 +4,8 @@ use async_curl::actor::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::HttpClient,
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
-use url::Url;
+use http::{Method, Request};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -15,12 +13,11 @@ async fn main() {
 
     let collector = Collector::File(FileInfo::path(PathBuf::from("<FILE PATH TO SAVE>")));
 
-    let request = HttpRequest {
-        url: Url::parse("<SOURCE URL>").unwrap(),
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri("<SOURCE URL>")
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
         .request(request)
