@@ -1,14 +1,13 @@
 use std::fs;
 
 use async_curl::actor::CurlActor;
-use http::{HeaderMap, Method, StatusCode};
+use http::{Method, Request, StatusCode};
 use test_case::test_case;
 use tokio::sync::mpsc::channel;
 use url::Url;
 
 use crate::collector::{Collector, FileInfo};
 use crate::http_client::{BytesOffset, BytesPerSec, HttpClient};
-use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
 #[tokio::test]
@@ -20,12 +19,12 @@ async fn test_download() {
     let save_to = tempdir.path().join("downloaded_file.jpg");
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -35,10 +34,10 @@ async fn test_download() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
     assert_eq!(fs::read(save_to).unwrap(), include_bytes!("sample.jpg"));
-    assert!(!response.headers.is_empty());
+    assert!(!response.headers().is_empty());
 }
 
 #[tokio::test]
@@ -50,12 +49,12 @@ async fn test_download_with_speed_control() {
     let save_to = tempdir.path().join("downloaded_file.jpg");
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .download_speed(BytesPerSec::from(40000000))
         .unwrap()
@@ -67,10 +66,10 @@ async fn test_download_with_speed_control() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
     assert_eq!(fs::read(save_to).unwrap(), include_bytes!("sample.jpg"));
-    assert!(!response.headers.is_empty());
+    assert!(!response.headers().is_empty());
 }
 
 #[test_case(4500, StatusCode::PARTIAL_CONTENT; "Offset 4500 bytes")]
@@ -91,12 +90,12 @@ async fn test_resume_download(offset: usize, expected_status_code: StatusCode) {
 
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(save_to.clone()));
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .resume_from(BytesOffset::from(partial_file_size))
         .unwrap()
@@ -108,10 +107,10 @@ async fn test_resume_download(offset: usize, expected_status_code: StatusCode) {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, expected_status_code);
-    assert_eq!(response.body, None);
+    assert_eq!(response.status(), expected_status_code);
+    assert_eq!(*response.body(), None);
     assert_eq!(fs::read(save_to).unwrap(), include_bytes!("sample.jpg"));
-    assert!(!response.headers.is_empty());
+    assert!(!response.headers().is_empty());
 }
 
 #[tokio::test]
@@ -128,12 +127,11 @@ async fn test_download_with_transfer_speed_sender() {
 
     let file_info = FileInfo::path(save_to.clone()).with_transfer_speed_sender(tx);
     let collector = Collector::File(file_info);
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
 
     let handle = tokio::spawn(async move {
         while let Some(speed) = rx.recv().await {
@@ -152,10 +150,10 @@ async fn test_download_with_transfer_speed_sender() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
     assert_eq!(fs::read(save_to).unwrap(), include_bytes!("sample.jpg"));
-    assert!(!response.headers.is_empty());
+    assert!(!response.headers().is_empty());
 
     handle.abort();
 }
@@ -169,12 +167,12 @@ async fn test_download_with_headers() {
     let save_to = tempdir.path().join("downloaded_file.jpg");
     let actor = CurlActor::new();
     let collector = Collector::FileAndHeaders(FileInfo::path(save_to.clone()), Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -184,8 +182,8 @@ async fn test_download_with_headers() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
     assert_eq!(fs::read(save_to).unwrap(), include_bytes!("sample.jpg"));
-    assert!(!response.headers.is_empty());
+    assert!(!response.headers().is_empty());
 }

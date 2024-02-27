@@ -1,10 +1,9 @@
 use async_curl::actor::CurlActor;
-use http::{HeaderMap, Method, StatusCode};
+use http::{Method, Request, StatusCode};
 use url::Url;
 
 use crate::collector::Collector;
 use crate::http_client::HttpClient;
-use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
 #[tokio::test]
@@ -15,12 +14,12 @@ async fn test_post() {
 
     let actor = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::POST,
-        headers: HeaderMap::new(),
-        body: Some("test body".as_bytes().to_vec()),
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::POST)
+        .body(Some("test body".as_bytes().to_vec()))
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -30,9 +29,10 @@ async fn test_post() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body.unwrap().len(), 0);
-    assert!(!response.headers.is_empty());
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), Some(Vec::new()));
+    assert!(!response.headers().is_empty());
 }
 
 #[tokio::test]
@@ -43,12 +43,12 @@ async fn test_post_with_headers() {
 
     let actor = CurlActor::new();
     let collector = Collector::RamAndHeaders(Vec::new(), Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::POST,
-        headers: HeaderMap::new(),
-        body: Some("test body".as_bytes().to_vec()),
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::POST)
+        .body(Some("test body".as_bytes().to_vec()))
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -58,9 +58,9 @@ async fn test_post_with_headers() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body.unwrap().len(), 0);
-    assert!(!response.headers.is_empty());
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), Some(Vec::new()));
+    assert!(!response.headers().is_empty());
 }
 
 #[tokio::test]
@@ -70,12 +70,12 @@ async fn test_post_sync() {
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
     let collector = Collector::Ram(Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::POST,
-        headers: HeaderMap::new(),
-        body: Some("test body".as_bytes().to_vec()),
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::POST)
+        .body(Some("test body".as_bytes().to_vec()))
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .request(request)
         .unwrap()
@@ -84,7 +84,7 @@ async fn test_post_sync() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body.unwrap().len(), 0);
-    assert!(!response.headers.is_empty());
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), Some(Vec::new()));
+    assert!(!response.headers().is_empty());
 }

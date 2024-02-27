@@ -8,8 +8,8 @@
 //! ## Get Request
 //! ```rust,no_run
 //! use async_curl::actor::CurlActor;
-//! use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-//! use http::{HeaderMap, Method};
+//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use http::{Method, Request};
 //! use url::Url;
 //!
 //! #[tokio::main(flavor = "current_thread")]
@@ -17,12 +17,11 @@
 //!     let actor = CurlActor::new();
 //!     let collector = Collector::Ram(Vec::new());
 //!
-//!     let request = HttpRequest {
-//!         url: Url::parse("<SOURCE URL>").unwrap(),
-//!         method: Method::GET,
-//!         headers: HeaderMap::new(),
-//!         body: None,
-//!     };
+//!     let request = Request::builder()
+//!         .uri("<SOURCE URL>")
+//!         .method(Method::GET)
+//!         .body(None)
+//!         .unwrap();
 //!
 //!     let response = HttpClient::new(collector)
 //!         .request(request).unwrap()
@@ -37,8 +36,8 @@
 //! ## Post Request
 //! ```rust,no_run
 //! use async_curl::actor::CurlActor;
-//! use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-//! use http::{HeaderMap, Method};
+//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use http::{Method, Request};
 //! use url::Url;
 //!
 //! #[tokio::main(flavor = "current_thread")]
@@ -46,12 +45,11 @@
 //!     let actor = CurlActor::new();
 //!     let collector = Collector::Ram(Vec::new());
 //!
-//!     let request = HttpRequest {
-//!         url: Url::parse("<TARGET URL>").unwrap(),
-//!         method: Method::POST,
-//!         headers: HeaderMap::new(),
-//!         body: Some("test body".as_bytes().to_vec()),
-//!     };
+//!     let request = Request::builder()
+//!         .uri("<TARGET URL>")
+//!         .method(Method::POST)
+//!         .body(Some("test body".as_bytes().to_vec()))
+//!         .unwrap();
 //!
 //!     let response = HttpClient::new(collector)
 //!         .request(request).unwrap()
@@ -71,9 +69,8 @@
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::HttpClient,
-//!     request::HttpRequest,
 //! };
-//! use http::{HeaderMap, Method};
+//! use http::{Method, Request};
 //! use url::Url;
 //!
 //! #[tokio::main(flavor = "current_thread")]
@@ -82,12 +79,11 @@
 //!
 //!     let collector = Collector::File(FileInfo::path(PathBuf::from("<FILE PATH TO SAVE>")));
 //!
-//!     let request = HttpRequest {
-//!         url: Url::parse("<SOURCE URL>").unwrap(),
-//!         method: Method::GET,
-//!         headers: HeaderMap::new(),
-//!         body: None,
-//!     };
+//!     let request = Request::builder()
+//!         .uri("<SOURCE URL>")
+//!         .method(Method::GET)
+//!         .body(None)
+//!         .unwrap();
 //!
 //!     let response = HttpClient::new(collector)
 //!         .request(request)
@@ -109,9 +105,8 @@
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::{FileSize, HttpClient},
-//!     request::HttpRequest,
 //! };
-//! use http::{HeaderMap, Method};
+//! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
 //! #[tokio::main(flavor = "current_thread")]
@@ -122,12 +117,11 @@
 //!     let actor = CurlActor::new();
 //!     let collector = Collector::File(FileInfo::path(file_to_be_uploaded));
 //!
-//!     let request = HttpRequest {
-//!         url: Url::parse("<TARGET URL>").unwrap(),
-//!         method: Method::PUT,
-//!         headers: HeaderMap::new(),
-//!         body: None,
-//!     };
+//!     let request = Request::builder()
+//!         .uri("<TARGET URL>")
+//!         .method(Method::PUT)
+//!         .body(None)
+//!         .unwrap();
 //!
 //!     let response = HttpClient::new(collector)
 //!         .upload_file_size(FileSize::from(file_size)).unwrap()
@@ -143,9 +137,9 @@
 //! ## Concurrency
 //! ```rust,no_run
 //! use async_curl::actor::CurlActor;
-//! use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
+//! use curl_http_client::{collector::Collector, http_client::HttpClient};
 //! use futures::future;
-//! use http::{HeaderMap, Method};
+//! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
 //! #[tokio::main(flavor = "current_thread")]
@@ -160,12 +154,11 @@
 //!
 //!         let handle = tokio::spawn(async move {
 //!             let collector = Collector::Ram(Vec::new());
-//!             let request = HttpRequest {
-//!                 url: Url::parse("https://www.rust-lang.org/").unwrap(),
-//!                 method: Method::GET,
-//!                 headers: HeaderMap::new(),
-//!                 body: None,
-//!             };
+//!             let request = Request::builder()
+//!                 .uri("https://www.rust-lang.org/")
+//!                 .method(Method::GET)
+//!                 .body(None)
+//!                 .unwrap();
 //!
 //!             let response = HttpClient::new(collector)
 //!                 .request(request)
@@ -196,9 +189,8 @@
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::{BytesOffset, HttpClient},
-//!     request::HttpRequest,
 //! };
-//! use http::{HeaderMap, Method};
+//! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
 //! #[tokio::main(flavor = "current_thread")]
@@ -208,12 +200,11 @@
 //!     let collector = Collector::File(FileInfo::path(save_to.clone()));
 //!
 //!     let partial_download_file_size = fs::metadata(save_to.as_path()).unwrap().len() as usize;
-//!     let request = HttpRequest {
-//!         url: Url::parse("<SOURCE URL>").unwrap(),
-//!         method: Method::GET,
-//!         headers: HeaderMap::new(),
-//!         body: None,
-//!     };
+//!     let request = Request::builder()
+//!         .uri("<SOURCE URL>")
+//!         .method(Method::GET)
+//!         .body(None)
+//!         .unwrap();
 //!
 //!     let response = HttpClient::new(collector)
 //!         .resume_from(BytesOffset::from(partial_download_file_size)).unwrap()
@@ -234,9 +225,8 @@
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::HttpClient,
-//!     request::HttpRequest,
 //! };
-//! use http::{HeaderMap, Method};
+//! use http::{HeaderMap, Method, Request};
 //! use tokio::sync::mpsc::channel;
 //! use url::Url;
 //!
@@ -254,12 +244,11 @@
 //!         }
 //!     });
 //!
-//!     let request = HttpRequest {
-//!         url: Url::parse("<SOURCE URL>").unwrap(),
-//!         method: Method::GET,
-//!         headers: HeaderMap::new(),
-//!         body: None,
-//!     };
+//!     let request = Request::builder()
+//!         .uri("<SOURCE URL>")
+//!         .method(Method::GET)
+//!         .body(None)
+//!         .unwrap();
 //!
 //!     let response = HttpClient::new(collector)
 //!         .request(request).unwrap()
@@ -281,9 +270,8 @@
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::{FileSize, HttpClient},
-//!     request::HttpRequest,
 //! };
-//! use http::{HeaderMap, Method};
+//! use http::{HeaderMap, Method, Request};
 //! use tokio::sync::mpsc::channel;
 //! use url::Url;
 //!
@@ -304,12 +292,11 @@
 //!         }
 //!     });
 //!
-//!     let request = HttpRequest {
-//!         url: Url::parse("<TARGET URL>").unwrap(),
-//!         method: Method::PUT,
-//!         headers: HeaderMap::new(),
-//!         body: None,
-//!     };
+//!     let request = Request::builder()
+//!         .uri("<TARGET URL>")
+//!         .method(Method::PUT)
+//!         .body(None)
+//!         .unwrap();
 //!
 //!     let response = HttpClient::new(collector)
 //!         .upload_file_size(FileSize::from(file_size)).unwrap()
@@ -326,18 +313,17 @@
 //! # Synchronous Examples
 //! ## Get Request
 //! ```rust,no_run
-//! use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-//! use http::{HeaderMap, Method};
+//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
 //! let collector = Collector::Ram(Vec::new());
 //!
-//! let request = HttpRequest {
-//!     url: Url::parse("<SOURCE URL>").unwrap(),
-//!     method: Method::GET,
-//!     headers: HeaderMap::new(),
-//!     body: None,
-//! };
+//! let request = Request::builder()
+//!     .uri("<SOURCE URL>")
+//!     .method(Method::GET)
+//!     .body(None)
+//!     .unwrap();
 //!
 //! let response = HttpClient::new(collector)
 //!     .request(request).unwrap()
@@ -350,18 +336,17 @@
 //!
 //! ## Post Request
 //! ```rust,no_run
-//! use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
-//! use http::{HeaderMap, Method};
+//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
 //! let collector = Collector::Ram(Vec::new());
 //!
-//! let request = HttpRequest {
-//!     url: Url::parse("<TARGET URL>").unwrap(),
-//!     method: Method::POST,
-//!     headers: HeaderMap::new(),
-//!     body: Some("test body".as_bytes().to_vec()),
-//! };
+//! let request = Request::builder()
+//!     .uri("<TARGET URL>")
+//!     .method(Method::POST)
+//!     .body(Some("test body".as_bytes().to_vec()))
+//!     .unwrap();
 //!
 //! let response = HttpClient::new(collector)
 //!     .request(request).unwrap()
@@ -379,19 +364,17 @@
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::HttpClient,
-//!     request::HttpRequest,
 //! };
-//! use http::{HeaderMap, Method};
+//! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
 //! let collector = Collector::File(FileInfo::path(PathBuf::from("<FILE PATH TO SAVE>")));
 //!
-//! let request = HttpRequest {
-//!     url: Url::parse("<SOURCE URL>").unwrap(),
-//!     method: Method::GET,
-//!     headers: HeaderMap::new(),
-//!     body: None,
-//! };
+//! let request = Request::builder()
+//!     .uri("<SOURCE URL>")
+//!     .method(Method::GET)
+//!     .body(None)
+//!     .unwrap();
 //!
 //! let response = HttpClient::new(collector)
 //!     .request(request)
@@ -410,21 +393,19 @@
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::{FileSize, HttpClient},
-//!     request::HttpRequest,
 //! };
-//! use http::{HeaderMap, Method};
+//! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
 //! let file_to_be_uploaded = PathBuf::from("<FILE PATH TO BE UPLOADED>");
 //! let file_size = fs::metadata(file_to_be_uploaded.as_path()).unwrap().len() as usize;
 //! let collector = Collector::File(FileInfo::path(file_to_be_uploaded));
 //!
-//! let request = HttpRequest {
-//!     url: Url::parse("<TARGET URL>").unwrap(),
-//!     method: Method::PUT,
-//!     headers: HeaderMap::new(),
-//!     body: None,
-//! };
+//! let request = Request::builder()
+//!     .uri("<TARGET URL>")
+//!     .method(Method::PUT)
+//!     .body(None)
+//!     .unwrap();
 //!
 //! let response = HttpClient::new(collector)
 //!     .upload_file_size(FileSize::from(file_size)).unwrap()
@@ -439,8 +420,6 @@
 pub mod collector;
 pub mod error;
 pub mod http_client;
-pub mod request;
-pub mod response;
 
 pub mod dep {
     pub use curl;

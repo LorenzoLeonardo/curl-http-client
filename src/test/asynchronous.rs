@@ -1,11 +1,10 @@
 use async_curl::actor::CurlActor;
 use futures::future;
-use http::{HeaderMap, Method, StatusCode};
+use http::{Method, Request, StatusCode};
 use url::Url;
 
 use crate::collector::Collector;
 use crate::http_client::HttpClient;
-use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
 #[tokio::test]
@@ -16,12 +15,12 @@ async fn test_across_multiple_threads() {
 
     let curl = CurlActor::new();
     let collector = Collector::Ram(Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::GET,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::GET)
+        .body(None)
+        .unwrap();
+
     const NUM_CONCURRENT: usize = 100;
 
     let mut handles = Vec::new();
@@ -38,8 +37,11 @@ async fn test_across_multiple_threads() {
                 .await
                 .unwrap();
             println!("Response: {:?}", response);
-            assert_eq!(response.status_code, StatusCode::OK);
-            assert_eq!(response.body.unwrap(), "test body".as_bytes().to_vec());
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(
+                *response.body().as_ref().unwrap(),
+                "test body".as_bytes().to_vec()
+            );
         });
         handles.push(handle);
     }

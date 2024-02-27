@@ -1,8 +1,7 @@
 use async_curl::actor::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient, request::HttpRequest};
+use curl_http_client::{collector::Collector, http_client::HttpClient};
 use futures::future;
-use http::{HeaderMap, Method};
-use url::Url;
+use http::{Method, Request};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {
@@ -16,12 +15,11 @@ async fn main() {
 
         let handle = tokio::spawn(async move {
             let collector = Collector::Ram(Vec::new());
-            let request = HttpRequest {
-                url: Url::parse("https://www.rust-lang.org/").unwrap(),
-                method: Method::GET,
-                headers: HeaderMap::new(),
-                body: None,
-            };
+            let request = Request::builder()
+                .uri("https://www.rust-lang.org/")
+                .method(Method::GET)
+                .body(None)
+                .unwrap();
 
             let response = HttpClient::new(collector)
                 .request(request)

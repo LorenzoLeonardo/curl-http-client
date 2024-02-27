@@ -5,13 +5,11 @@ use curl::easy::{Auth, Easy2, Handler, HttpVersion, ProxyType, SslVersion, TimeC
 use derive_deref_rs::Deref;
 use http::{
     header::{CONTENT_LENGTH, CONTENT_TYPE},
-    HeaderMap, HeaderValue, Method, StatusCode,
+    HeaderMap, HeaderValue, Method, Request, Response,
 };
 use log::trace;
 
-use crate::{
-    collector::ExtendedHandler, error::Error, request::HttpRequest, response::HttpResponse,
-};
+use crate::{collector::ExtendedHandler, error::Error};
 
 /// Proceed to building state
 pub struct Build;
@@ -79,14 +77,17 @@ where
     ///
     /// The HttpRequest can be customized by the caller by setting the Url, Method Type,
     /// Headers and the Body.
-    pub fn request(mut self, request: HttpRequest) -> Result<Self, Error<C>> {
-        self.easy.url(&request.url.to_string()[..]).map_err(|e| {
-            trace!("{:?}", e);
-            Error::Curl(e)
-        })?;
+    pub fn request(mut self, request: Request<Option<Vec<u8>>>) -> Result<Self, Error<C>> {
+        self.easy
+            .url(request.uri().to_string().as_str())
+            .map_err(|e| {
+                trace!("{:?}", e);
+                Error::Curl(e)
+            })?;
 
         let mut headers = curl::easy::List::new();
-        request.headers.iter().try_for_each(|(name, value)| {
+
+        request.headers().iter().try_for_each(|(name, value)| {
             headers
                 .append(&format!(
                     "{}: {}",
@@ -108,15 +109,16 @@ where
             Error::Curl(e)
         })?;
 
-        match request.method {
+        match *request.method() {
             Method::POST => {
                 self.easy.post(true).map_err(Error::Curl)?;
-                if let Some(body) = request.body {
+
+                if let Some(body) = request.body() {
                     self.easy.post_field_size(body.len() as u64).map_err(|e| {
                         trace!("{:?}", e);
                         Error::Curl(e)
                     })?;
-                    self.easy.post_fields_copy(body.as_slice()).map_err(|e| {
+                    self.easy.post_fields_copy(body).map_err(|e| {
                         trace!("{:?}", e);
                         Error::Curl(e)
                     })?;
@@ -827,7 +829,7 @@ where
     }
 
     /// This will perform the curl operation asynchronously.
-    pub async fn perform(self) -> Result<HttpResponse, Error<C>> {
+    pub async fn perform(self) -> Result<Response<Option<Vec<u8>>>, Error<C>> {
         let easy = self.send_request().await?;
 
         let (data, headers) = easy.get_ref().get_response_body_and_headers();
@@ -875,14 +877,14 @@ where
             response_header
         };
 
-        Ok(HttpResponse {
-            status_code: StatusCode::from_u16(status_code).map_err(|err| {
-                trace!("{:?}", err);
-                Error::Http(err.to_string())
-            })?,
-            headers: response_header,
-            body: data,
-        })
+        let mut response = Response::builder();
+        for (name, value) in &response_header {
+            response = response.header(name, value);
+        }
+
+        response = response.status(status_code);
+
+        response.body(data).map_err(|e| Error::Http(e.to_string()))
     }
 }
 
@@ -903,7 +905,7 @@ where
     }
 
     /// This will perform the curl operation synchronously.
-    pub fn perform(self) -> Result<HttpResponse, Error<C>> {
+    pub fn perform(self) -> Result<Response<Option<Vec<u8>>>, Error<C>> {
         let easy = self.send_request()?;
 
         let (data, headers) = easy.get_ref().get_response_body_and_headers();
@@ -951,14 +953,14 @@ where
             response_header
         };
 
-        Ok(HttpResponse {
-            status_code: StatusCode::from_u16(status_code).map_err(|err| {
-                trace!("{:?}", err);
-                Error::Http(err.to_string())
-            })?,
-            headers: response_header,
-            body: data,
-        })
+        let mut response = Response::builder();
+        for (name, value) in &response_header {
+            response = response.header(name, value);
+        }
+
+        response = response.status(status_code);
+
+        response.body(data).map_err(|e| Error::Http(e.to_string()))
     }
 }
 /// A strong type unit when setting download speed and upload speed

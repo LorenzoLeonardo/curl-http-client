@@ -1,13 +1,12 @@
 use std::fs;
 
 use async_curl::actor::CurlActor;
-use http::{HeaderMap, Method, StatusCode};
+use http::{Method, Request, StatusCode};
 use tokio::sync::mpsc::channel;
 use url::Url;
 
 use crate::collector::{Collector, FileInfo};
 use crate::http_client::{BytesPerSec, FileSize, HttpClient};
-use crate::request::HttpRequest;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
 #[tokio::test]
@@ -22,12 +21,12 @@ async fn test_upload() {
 
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(to_be_uploaded));
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
@@ -39,9 +38,9 @@ async fn test_upload() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
-    assert!(!response.headers.is_empty());
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
+    assert!(!response.headers().is_empty());
 }
 
 #[tokio::test]
@@ -56,12 +55,12 @@ async fn test_upload_with_speed_control() {
 
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(to_be_uploaded));
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
@@ -75,9 +74,9 @@ async fn test_upload_with_speed_control() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
-    assert!(!response.headers.is_empty());
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
+    assert!(!response.headers().is_empty());
 }
 
 #[tokio::test]
@@ -97,12 +96,11 @@ async fn test_upload_with_transfer_speed_sender() {
 
     let file_info = FileInfo::path(to_be_uploaded).with_transfer_speed_sender(tx);
     let collector = Collector::File(file_info);
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
 
     let handle = tokio::spawn(async move {
         while let Some(speed) = rx.recv().await {
@@ -123,9 +121,9 @@ async fn test_upload_with_transfer_speed_sender() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
-    assert!(!response.headers.is_empty());
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
+    assert!(!response.headers().is_empty());
 
     handle.abort();
 }
@@ -142,12 +140,12 @@ async fn test_upload_with_headers() {
 
     let actor = CurlActor::new();
     let collector = Collector::FileAndHeaders(FileInfo::path(to_be_uploaded), Vec::new());
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
+
     let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
@@ -159,9 +157,9 @@ async fn test_upload_with_headers() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
-    assert!(!response.headers.is_empty());
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
+    assert!(!response.headers().is_empty());
 }
 
 #[tokio::test]
@@ -175,12 +173,11 @@ async fn test_upload_sync() {
     let file_size = fs::metadata(to_be_uploaded.as_path()).unwrap().len() as usize;
 
     let collector = Collector::File(FileInfo::path(to_be_uploaded));
-    let request = HttpRequest {
-        url: target_url,
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
     let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
         .unwrap()
@@ -191,7 +188,7 @@ async fn test_upload_sync() {
         .unwrap();
 
     println!("Response: {:?}", response);
-    assert_eq!(response.status_code, StatusCode::OK);
-    assert_eq!(response.body, None);
-    assert!(!response.headers.is_empty());
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
+    assert!(!response.headers().is_empty());
 }

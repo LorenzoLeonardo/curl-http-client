@@ -4,10 +4,8 @@ use async_curl::actor::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{FileSize, HttpClient},
-    request::HttpRequest,
 };
-use http::{HeaderMap, Method};
-use url::Url;
+use http::{Method, Request};
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -17,12 +15,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let actor = CurlActor::new();
     let collector = Collector::File(FileInfo::path(file_to_be_uploaded));
 
-    let request = HttpRequest {
-        url: Url::parse("<TARGET URL>").unwrap(),
-        method: Method::PUT,
-        headers: HeaderMap::new(),
-        body: None,
-    };
+    let request = Request::builder()
+        .uri("<TARGET URL>")
+        .method(Method::PUT)
+        .body(None)
+        .unwrap();
 
     let response = HttpClient::new(collector)
         .upload_file_size(FileSize::from(file_size))
