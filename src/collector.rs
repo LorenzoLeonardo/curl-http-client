@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 use std::io::Read;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use std::{
     fs::{File, OpenOptions},
@@ -8,6 +9,7 @@ use std::{
 };
 
 use curl::easy::{Handler, ReadError, WriteError};
+use derive_deref_rs::Deref;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use log::trace;
 use tokio::sync::mpsc::Sender;
@@ -53,6 +55,29 @@ impl From<f64> for TransferSpeed {
         Self(value)
     }
 }
+
+/// AbortPerform is a flag that can be safely shared across threads to be able to cancel Curl perform operation
+/// via progress function of the Collector.
+#[derive(Deref, Clone, Debug)]
+pub struct AbortPerform {
+    abort: Arc<Mutex<bool>>,
+}
+
+impl AbortPerform {
+    /// Creates a new AbortPerform object with false as the default value.
+    pub fn new() -> Self {
+        Self {
+            abort: Arc::new(Mutex::new(false)),
+        }
+    }
+}
+
+impl Default for AbortPerform {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 /// Stores the path for the downloaded file or the uploaded file.
 /// Internally it will also monitor the bytes transferred and the Download/Upload speed.
 #[derive(Clone, Debug)]
@@ -65,6 +90,7 @@ pub struct FileInfo {
     bytes_transferred: usize,
     transfer_started: Instant,
     transfer_speed: TransferSpeed,
+    abort: Option<AbortPerform>,
 }
 
 impl FileInfo {
@@ -76,6 +102,7 @@ impl FileInfo {
             bytes_transferred: 0,
             transfer_started: Instant::now(),
             transfer_speed: TransferSpeed::from(0),
+            abort: None,
         }
     }
 
@@ -83,6 +110,13 @@ impl FileInfo {
     /// It uses a tokio bounded channel to send the information across tasks.
     pub fn with_transfer_speed_sender(mut self, send_speed_info: Sender<TransferSpeed>) -> Self {
         self.send_speed_info = Some(send_speed_info);
+        self
+    }
+
+    /// Set the FileInfo struct with a perform aborter.
+    /// AbortPerform is a shared flag across threads to be able to switch this flag to true to abort the curl perform.
+    pub fn with_perform_aborter(mut self, abort: AbortPerform) -> Self {
+        self.abort = Some(abort);
         self
     }
 
@@ -265,6 +299,21 @@ impl Handler for Collector {
             }
         }
         true
+    }
+
+    fn progress(&mut self, dltotal: f64, dlnow: f64, ultotal: f64, ulnow: f64) -> bool {
+        trace!("dltotal: {dltotal} dlnow: {dlnow} ultotal: {ultotal} ulnow: {ulnow}");
+        match self {
+            Collector::File(file_info) | Collector::FileAndHeaders(file_info, _) => {
+                if let Some(abort) = &file_info.abort {
+                    let abort = *abort.lock().unwrap();
+                    !abort
+                } else {
+                    true
+                }
+            }
+            Collector::Ram(_) | Collector::RamAndHeaders(_, _) => true,
+        }
     }
 }
 

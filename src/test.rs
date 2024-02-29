@@ -1,4 +1,5 @@
 mod asynchronous;
+mod cancel;
 mod download;
 mod get;
 mod headers;
