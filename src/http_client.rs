@@ -1,6 +1,6 @@
 use std::{path::Path, time::Duration};
 
-use async_curl::actor::CurlActor;
+use async_curl::actor::Actor;
 use curl::easy::{Auth, Easy2, Handler, HttpVersion, ProxyType, SslVersion, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{
@@ -23,10 +23,6 @@ pub struct HttpClient<C, S>
 where
     C: Handler + std::fmt::Debug + Send + 'static,
 {
-    /// This is the the actor handler that can be cloned to be able to handle multiple request sender
-    /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
-    /// non-blocking I/O during curl perform.
-    actor: Option<CurlActor<C>>,
     /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
     /// asynchronous task during perform operation.
     easy: Easy2<C>,
@@ -45,7 +41,6 @@ where
     /// There is a built-in [`Collector`](https://docs.rs/curl-http-client/latest/curl_http_client/collector/enum.Collector.html) in this crate that can be used store HTTP response body into memory or in a File.
     pub fn new(collector: C) -> Self {
         Self {
-            actor: None,
             easy: Easy2::new(collector),
             _state: Build,
         }
@@ -56,21 +51,16 @@ where
     /// The [`CurlActor`](https://docs.rs/async-curl/latest/async_curl/actor/struct.CurlActor.html) is the actor handler that can be cloned
     /// to be able to handle multiple request sender and a single consumer that is spawned in the background to be able to achieve
     /// non-blocking I/O during curl perform.
-    pub fn nonblocking(self, actor: CurlActor<C>) -> HttpClient<C, PerformAsync> {
-        HttpClient::<C, PerformAsync> {
-            actor: Some(actor),
+    pub fn nonblocking<A: Actor<C>>(self, actor: A) -> AsyncHttpClient<C, A> {
+        AsyncHttpClient::<C, A> {
+            actor,
             easy: self.easy,
-            _state: PerformAsync,
         }
     }
 
     /// This marks the end of the curl builder to be able to do synchronous operation during perform.
-    pub fn blocking(self) -> HttpClient<C, PerformSync> {
-        HttpClient::<C, PerformSync> {
-            actor: None,
-            easy: self.easy,
-            _state: PerformSync,
-        }
+    pub fn blocking(self) -> SyncHttpClient<C> {
+        SyncHttpClient::<C> { easy: self.easy }
     }
 
     /// Sets the HTTP request.
@@ -806,9 +796,25 @@ where
     }
 }
 
-impl<C> HttpClient<C, PerformAsync>
+/// The HTTP Client struct that wraps curl Easy2.
+pub struct AsyncHttpClient<C, A>
+where
+    C: Handler + std::fmt::Debug + Send + 'static,
+    A: Actor<C>,
+{
+    /// This is the the actor handler that can be cloned to be able to handle multiple request sender
+    /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
+    /// non-blocking I/O during curl perform.
+    actor: A,
+    /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
+    /// asynchronous task during perform operation.
+    easy: Easy2<C>,
+}
+
+impl<C, A> AsyncHttpClient<C, A>
 where
     C: ExtendedHandler + std::fmt::Debug + Send,
+    A: Actor<C>,
 {
     /// This will send the request asynchronously,
     /// and return the underlying [`Easy2<C>`](https://docs.rs/curl/latest/curl/easy/struct.Easy2.html) useful if you
@@ -817,15 +823,10 @@ where
     /// This becomes a non-blocking I/O since the actual perform operation is done
     /// at the actor side using Curl-Multi.
     pub async fn send_request(self) -> Result<Easy2<C>, Error<C>> {
-        if let Some(actor) = self.actor {
-            let easy = actor.send_request(self.easy).await.map_err(|e| {
-                trace!("{:?}", e);
-                Error::Perform(e)
-            })?;
-            Ok(easy)
-        } else {
-            panic!("No actor was set!!!");
-        }
+        self.actor.send_request(self.easy).await.map_err(|e| {
+            trace!("{:?}", e);
+            Error::Perform(e)
+        })
     }
 
     /// This will perform the curl operation asynchronously.
@@ -888,7 +889,17 @@ where
     }
 }
 
-impl<C> HttpClient<C, PerformSync>
+/// The HTTP Client struct that wraps curl Easy2.
+pub struct SyncHttpClient<C>
+where
+    C: Handler + std::fmt::Debug + Send + 'static,
+{
+    /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
+    /// asynchronous task during perform operation.
+    easy: Easy2<C>,
+}
+
+impl<C> SyncHttpClient<C>
 where
     C: ExtendedHandler + std::fmt::Debug + Send,
 {
