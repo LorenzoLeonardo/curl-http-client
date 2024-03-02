@@ -6,7 +6,7 @@ use url::Url;
 
 use crate::{
     collector::{AbortPerform, Collector, FileInfo},
-    http_client::{BytesPerSec, HttpClient},
+    http_client::{Bps, HttpClient},
     test::test_setup::{setup_test_environment, MockResponder, ResponderType},
 };
 
@@ -33,7 +33,7 @@ async fn test_download_was_cancelled() {
         let response = HttpClient::new(collector)
             .progress(true)
             .unwrap()
-            .download_speed(BytesPerSec::from(5000000))
+            .download_speed(Bps::from(5000000))
             .unwrap()
             .request(request)
             .unwrap()
@@ -84,7 +84,7 @@ async fn test_download_was_not_cancelled() {
         let response = HttpClient::new(collector)
             .progress(true)
             .unwrap()
-            .download_speed(BytesPerSec::from(5000000))
+            .download_speed(Bps::from(5000000))
             .unwrap()
             .request(request)
             .unwrap()
