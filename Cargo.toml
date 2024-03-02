@@ -12,7 +12,7 @@ readme = "README.md"
 categories = ["web-programming::http-client"]
 
 [dependencies]
-async-curl = "0.3"
+async-curl = "0.4"
 curl = "0.4"
 derive-deref-rs = "0.1"
 http = "1.0"
