@@ -7,7 +7,7 @@ use tokio::sync::mpsc::channel;
 use url::Url;
 
 use crate::collector::{Collector, FileInfo};
-use crate::http_client::{BytesOffset, BytesPerSec, HttpClient};
+use crate::http_client::{Bps, BytesOffset, HttpClient};
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
 #[tokio::test]
@@ -56,7 +56,7 @@ async fn test_download_with_speed_control() {
         .unwrap();
 
     let response = HttpClient::new(collector)
-        .download_speed(BytesPerSec::from(40000000))
+        .download_speed(Bps::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()
@@ -140,7 +140,7 @@ async fn test_download_with_transfer_speed_sender() {
     });
 
     let response = HttpClient::new(collector)
-        .download_speed(BytesPerSec::from(40000000))
+        .download_speed(Bps::from(40000000))
         .unwrap()
         .request(request)
         .unwrap()

@@ -138,7 +138,7 @@ where
     ///
     /// By default this option is not set (unlimited speed) and corresponds to
     /// `CURLOPT_MAX_RECV_SPEED_LARGE`.
-    pub fn download_speed(mut self, speed: BytesPerSec) -> Result<Self, Error<C>> {
+    pub fn download_speed(mut self, speed: Bps) -> Result<Self, Error<C>> {
         self.easy.max_recv_speed(*speed).map_err(Error::Curl)?;
         Ok(self)
     }
@@ -160,7 +160,7 @@ where
     ///
     /// By default this option is not set (unlimited speed) and corresponds to
     /// `CURLOPT_MAX_SEND_SPEED_LARGE`.
-    pub fn upload_speed(mut self, speed: BytesPerSec) -> Result<Self, Error<C>> {
+    pub fn upload_speed(mut self, speed: Bps) -> Result<Self, Error<C>> {
         self.easy.max_send_speed(*speed).map_err(Error::Curl)?;
         Ok(self)
     }
@@ -965,14 +965,31 @@ where
         response.body(data).map_err(|e| Error::Http(e.to_string()))
     }
 }
+
+/// A strong type unit when setting download speed and upload speed
+/// in Mega bits per second.
+#[derive(Deref)]
+pub struct Mbps(u32);
+impl From<u32> for Mbps {
+    fn from(value: u32) -> Self {
+        Self(value)
+    }
+}
+
 /// A strong type unit when setting download speed and upload speed
 /// in bytes per second.
 #[derive(Deref)]
-pub struct BytesPerSec(u64);
+pub struct Bps(u64);
 
-impl From<u64> for BytesPerSec {
+impl From<u64> for Bps {
     fn from(value: u64) -> Self {
         Self(value)
+    }
+}
+
+impl From<Mbps> for Bps {
+    fn from(value: Mbps) -> Self {
+        Self::from((*value * 125_000) as u64)
     }
 }
 

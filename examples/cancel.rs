@@ -5,7 +5,7 @@ use http::{Method, Request};
 
 use curl_http_client::{
     collector::{AbortPerform, Collector, FileInfo},
-    http_client::{BytesPerSec, HttpClient},
+    http_client::{Bps, HttpClient},
 };
 
 #[tokio::main(flavor = "current_thread")]
@@ -28,7 +28,7 @@ async fn main() {
         let response = HttpClient::new(collector)
             .progress(true)
             .unwrap()
-            .download_speed(BytesPerSec::from(5000000))
+            .download_speed(Bps::from(5000000))
             .unwrap()
             .request(request)
             .unwrap()
