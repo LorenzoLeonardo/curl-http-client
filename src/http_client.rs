@@ -1,4 +1,4 @@
-use std::{path::Path, time::Duration};
+use std::{fmt::Debug, path::Path, time::Duration};
 
 use async_curl::actor::Actor;
 use curl::easy::{Auth, Easy2, Handler, HttpVersion, ProxyType, SslVersion, TimeCondition};
@@ -11,29 +11,17 @@ use log::trace;
 
 use crate::{collector::ExtendedHandler, error::Error};
 
-/// Proceed to building state
-pub struct Build;
-/// Proceed to perform async state
-pub struct PerformAsync;
-/// Proceed to perform sync state
-pub struct PerformSync;
-
-/// The HTTP Client struct that wraps curl Easy2.
-pub struct HttpClient<C, S>
+/// The HttpClient struct's job is to wrap and build curl Easy2.
+pub struct HttpClient<C>
 where
-    C: Handler + std::fmt::Debug + Send + 'static,
+    C: Handler + Debug + Send + 'static,
 {
-    /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
-    /// asynchronous task during perform operation.
     easy: Easy2<C>,
-    /// This is a type-state builder pattern to help programmers not to mis-use when building curl options before perform
-    /// operation.
-    _state: S,
 }
 
-impl<C> HttpClient<C, Build>
+impl<C> HttpClient<C>
 where
-    C: ExtendedHandler + std::fmt::Debug + Send + 'static,
+    C: ExtendedHandler + Debug + Send + 'static,
 {
     /// Creates a new HTTP Client.
     ///
@@ -42,13 +30,16 @@ where
     pub fn new(collector: C) -> Self {
         Self {
             easy: Easy2::new(collector),
-            _state: Build,
         }
     }
 
     /// This marks the end of the curl builder to be able to do asynchronous operation during perform.
     ///
-    /// The [`CurlActor`](https://docs.rs/async-curl/latest/async_curl/actor/struct.CurlActor.html) is the actor handler that can be cloned
+    /// The parameter trait [`Actor<C>`](https://docs.rs/async-curl/latest/async_curl/actor/trait.Actor.html) is any custom Actor implemented by the user that
+    /// must implement a send_request that is non-blocking.
+    ///
+    /// There is a built-in [`CurlActor`](https://docs.rs/async-curl/latest/async_curl/actor/struct.CurlActor.html) that implements the
+    /// [`Actor<C>`](https://docs.rs/async-curl/latest/async_curl/actor/trait.Actor.html) trait that can be cloned
     /// to be able to handle multiple request sender and a single consumer that is spawned in the background to be able to achieve
     /// non-blocking I/O during curl perform.
     pub fn nonblocking<A: Actor<C>>(self, actor: A) -> AsyncHttpClient<C, A> {
@@ -796,24 +787,25 @@ where
     }
 }
 
-/// The HTTP Client struct that wraps curl Easy2.
+/// The AsyncHttpClient struct is the result when calling nonblocking() function to signify the end of the builder.
+/// The main job of this is to perform the Curl in nonblocking fashion.
 pub struct AsyncHttpClient<C, A>
 where
-    C: Handler + std::fmt::Debug + Send + 'static,
+    C: Handler + Debug + Send + 'static,
     A: Actor<C>,
 {
     /// This is the the actor handler that can be cloned to be able to handle multiple request sender
     /// and a single consumer that is spawned in the background upon creation of this object to be able to achieve
     /// non-blocking I/O during curl perform.
     actor: A,
-    /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
+    /// The `Easy2<C>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
     /// asynchronous task during perform operation.
     easy: Easy2<C>,
 }
 
 impl<C, A> AsyncHttpClient<C, A>
 where
-    C: ExtendedHandler + std::fmt::Debug + Send,
+    C: ExtendedHandler + Debug + Send,
     A: Actor<C>,
 {
     /// This will send the request asynchronously,
@@ -889,19 +881,18 @@ where
     }
 }
 
-/// The HTTP Client struct that wraps curl Easy2.
+/// The SyncHttpClient struct is the result when calling blocking() function to signify the end of the builder.
+/// The main job of this is to perform the Curl in blocking fashion.
 pub struct SyncHttpClient<C>
 where
-    C: Handler + std::fmt::Debug + Send + 'static,
+    C: Handler + Debug + Send + 'static,
 {
-    /// The `Easy2<Collector>` is the Easy2 from curl-rust crate wrapped in this struct to be able to do
-    /// asynchronous task during perform operation.
     easy: Easy2<C>,
 }
 
 impl<C> SyncHttpClient<C>
 where
-    C: ExtendedHandler + std::fmt::Debug + Send,
+    C: ExtendedHandler + Debug + Send,
 {
     /// This will send the request synchronously,
     /// and return the underlying [`Easy2<C>`](https://docs.rs/curl/latest/curl/easy/struct.Easy2.html) useful if you
