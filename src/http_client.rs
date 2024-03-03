@@ -42,16 +42,16 @@ where
     /// [`Actor<C>`](https://docs.rs/async-curl/latest/async_curl/actor/trait.Actor.html) trait that can be cloned
     /// to be able to handle multiple request sender and a single consumer that is spawned in the background to be able to achieve
     /// non-blocking I/O during curl perform.
-    pub fn nonblocking<A: Actor<C>>(self, actor: A) -> AsyncHttpClient<C, A> {
-        AsyncHttpClient::<C, A> {
+    pub fn nonblocking<A: Actor<C>>(self, actor: A) -> AsyncPerform<C, A> {
+        AsyncPerform::<C, A> {
             actor,
             easy: self.easy,
         }
     }
 
     /// This marks the end of the curl builder to be able to do synchronous operation during perform.
-    pub fn blocking(self) -> SyncHttpClient<C> {
-        SyncHttpClient::<C> { easy: self.easy }
+    pub fn blocking(self) -> SyncPerform<C> {
+        SyncPerform::<C> { easy: self.easy }
     }
 
     /// Sets the HTTP request.
@@ -787,9 +787,9 @@ where
     }
 }
 
-/// The AsyncHttpClient struct is the result when calling nonblocking() function to signify the end of the builder.
+/// The AsyncPerform struct is the result when calling nonblocking() function to signify the end of the builder.
 /// The main job of this is to perform the Curl in nonblocking fashion.
-pub struct AsyncHttpClient<C, A>
+pub struct AsyncPerform<C, A>
 where
     C: Handler + Debug + Send + 'static,
     A: Actor<C>,
@@ -803,7 +803,7 @@ where
     easy: Easy2<C>,
 }
 
-impl<C, A> AsyncHttpClient<C, A>
+impl<C, A> AsyncPerform<C, A>
 where
     C: ExtendedHandler + Debug + Send,
     A: Actor<C>,
@@ -881,16 +881,16 @@ where
     }
 }
 
-/// The SyncHttpClient struct is the result when calling blocking() function to signify the end of the builder.
+/// The SyncPerform struct is the result when calling blocking() function to signify the end of the builder.
 /// The main job of this is to perform the Curl in blocking fashion.
-pub struct SyncHttpClient<C>
+pub struct SyncPerform<C>
 where
     C: Handler + Debug + Send + 'static,
 {
     easy: Easy2<C>,
 }
 
-impl<C> SyncHttpClient<C>
+impl<C> SyncPerform<C>
 where
     C: ExtendedHandler + Debug + Send,
 {
