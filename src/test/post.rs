@@ -31,7 +31,7 @@ async fn test_post() {
     println!("Response: {:?}", response);
 
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(*response.body(), Some(Vec::new()));
+    assert_eq!(*response.body(), None);
     assert!(!response.headers().is_empty());
 }
 
@@ -60,7 +60,7 @@ async fn test_post_none() {
     println!("Response: {:?}", response);
 
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(*response.body(), Some(Vec::new()));
+    assert_eq!(*response.body(), None);
     assert!(!response.headers().is_empty());
 }
 
@@ -89,7 +89,7 @@ async fn test_post_none_no_option() {
     println!("Response: {:?}", response);
 
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(*response.body(), Some(Vec::new()));
+    assert_eq!(*response.body(), None);
     assert!(!response.headers().is_empty());
 }
 
@@ -117,7 +117,7 @@ async fn test_post_with_headers() {
 
     println!("Response: {:?}", response);
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(*response.body(), Some(Vec::new()));
+    assert_eq!(*response.body(), None);
     assert!(!response.headers().is_empty());
 }
 
@@ -143,7 +143,7 @@ async fn test_post_sync() {
 
     println!("Response: {:?}", response);
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(*response.body(), Some(Vec::new()));
+    assert_eq!(*response.body(), None);
     assert!(!response.headers().is_empty());
 }
 
@@ -169,7 +169,7 @@ async fn test_post_sync_not_option() {
 
     println!("Response: {:?}", response);
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(*response.body(), Some(Vec::new()));
+    assert_eq!(*response.body(), None);
     assert!(!response.headers().is_empty());
 }
 
@@ -198,6 +198,61 @@ async fn test_post_async_not_option() {
     println!("Response: {:?}", response);
 
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(*response.body(), Some(Vec::new()));
+    assert_eq!(*response.body(), None);
+    assert!(!response.headers().is_empty());
+}
+
+#[tokio::test]
+async fn test_post_sync_not_option_empty_string() {
+    let responder = MockResponder::new(ResponderType::Body(Vec::new()));
+    let (server, _tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let collector = Collector::Ram(Vec::new());
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::POST)
+        .body(Vec::new())
+        .unwrap();
+
+    let response = HttpClient::new(collector)
+        .request(request)
+        .unwrap()
+        .blocking()
+        .perform()
+        .unwrap();
+
+    println!("Response: {:?}", response);
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
+    assert!(!response.headers().is_empty());
+}
+
+#[tokio::test]
+async fn test_post_async_not_option_empty_string() {
+    let responder = MockResponder::new(ResponderType::Body(Vec::new()));
+    let (server, _tempdir) = setup_test_environment(responder).await;
+    let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
+
+    let actor = CurlActor::new();
+    let collector = Collector::Ram(Vec::new());
+    let request = Request::builder()
+        .uri(target_url.as_str())
+        .method(Method::POST)
+        .body(Vec::new())
+        .unwrap();
+
+    let response = HttpClient::new(collector)
+        .request(request)
+        .unwrap()
+        .nonblocking(actor)
+        .perform()
+        .await
+        .unwrap();
+
+    println!("Response: {:?}", response);
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(*response.body(), None);
     assert!(!response.headers().is_empty());
 }

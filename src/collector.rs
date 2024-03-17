@@ -325,8 +325,20 @@ impl ExtendedHandler for Collector {
     fn get_response_body(&self) -> Option<Vec<u8>> {
         match self {
             Collector::File(_) => None,
-            Collector::Ram(container) => Some(container.clone()),
-            Collector::RamAndHeaders(container, _) => Some(container.clone()),
+            Collector::Ram(container) => {
+                if container.is_empty() {
+                    None
+                } else {
+                    Some(container.clone())
+                }
+            }
+            Collector::RamAndHeaders(container, _) => {
+                if container.is_empty() {
+                    None
+                } else {
+                    Some(container.clone())
+                }
+            }
             Collector::FileAndHeaders(_, _) => None,
         }
     }
@@ -338,7 +350,13 @@ impl ExtendedHandler for Collector {
     fn get_response_body_and_headers(&self) -> (Option<Vec<u8>>, Option<HeaderMap>) {
         match self {
             Collector::File(_) => (None, None),
-            Collector::Ram(container) => (Some(container.clone()), None),
+            Collector::Ram(container) => {
+                if container.is_empty() {
+                    (None, None)
+                } else {
+                    (Some(container.clone()), None)
+                }
+            }
             Collector::RamAndHeaders(container, headers) => {
                 let header_str = std::str::from_utf8(headers).unwrap();
                 let mut header_map = HeaderMap::new();
@@ -354,7 +372,11 @@ impl ExtendedHandler for Collector {
                         }
                     }
                 }
-                (Some(container.clone()), Some(header_map))
+                if container.is_empty() {
+                    (None, Some(header_map))
+                } else {
+                    (Some(container.clone()), Some(header_map))
+                }
             }
             Collector::FileAndHeaders(_, headers) => {
                 let header_str = std::str::from_utf8(headers).unwrap();
