@@ -58,7 +58,7 @@ where
     ///
     /// The HttpRequest can be customized by the caller by setting the Url, Method Type,
     /// Headers and the Body.
-    pub fn request(mut self, request: Request<Option<Vec<u8>>>) -> Result<Self, Error<C>> {
+    pub fn request<B: CurlBodyRequest>(mut self, request: Request<B>) -> Result<Self, Error<C>> {
         self.easy
             .url(request.uri().to_string().as_str())
             .map_err(|e| {
@@ -94,7 +94,7 @@ where
             Method::POST => {
                 self.easy.post(true).map_err(Error::Curl)?;
 
-                if let Some(body) = request.body() {
+                if let Some(body) = request.body().get_bytes() {
                     self.easy.post_field_size(body.len() as u64).map_err(|e| {
                         trace!("{:?}", e);
                         Error::Curl(e)
@@ -1011,5 +1011,27 @@ pub struct FileSize(usize);
 impl From<usize> for FileSize {
     fn from(value: usize) -> Self {
         Self(value)
+    }
+}
+
+/// The purpose of this trait is to be able to accept
+/// request body with Option<Vec<u8>> or Vec<u8>
+pub trait CurlBodyRequest {
+    fn get_bytes(&self) -> Option<&Vec<u8>>;
+}
+
+impl CurlBodyRequest for Vec<u8> {
+    fn get_bytes(&self) -> Option<&Vec<u8>> {
+        if self.is_empty() {
+            None
+        } else {
+            Some(self)
+        }
+    }
+}
+
+impl CurlBodyRequest for Option<Vec<u8>> {
+    fn get_bytes(&self) -> Option<&Vec<u8>> {
+        self.as_ref()
     }
 }
