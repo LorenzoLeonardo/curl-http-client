@@ -1,6 +1,6 @@
 use std::{fmt::Debug, path::Path, time::Duration};
 
-use async_curl::actor::Actor;
+use async_curl::Actor;
 use curl::easy::{Auth, Easy2, Handler, HttpVersion, ProxyType, SslVersion, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{
