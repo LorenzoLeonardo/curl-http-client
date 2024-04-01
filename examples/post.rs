@@ -1,5 +1,5 @@
 use async_curl::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient};
+use curl_http_client::*;
 use http::{Method, Request};
 
 #[tokio::main(flavor = "current_thread")]

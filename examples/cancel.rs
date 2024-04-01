@@ -3,10 +3,7 @@ use std::{path::PathBuf, time::Duration};
 use async_curl::CurlActor;
 use http::{Method, Request};
 
-use curl_http_client::{
-    collector::{AbortPerform, Collector, FileInfo},
-    http_client::{Bps, HttpClient},
-};
+use curl_http_client::*;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() {

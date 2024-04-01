@@ -9,7 +9,7 @@ use http::{
 };
 use log::trace;
 
-use crate::{collector::ExtendedHandler, error::Error};
+use crate::{Error, ExtendedHandler};
 
 /// The HttpClient struct's job is to wrap and build curl Easy2.
 pub struct HttpClient<C>

@@ -14,7 +14,7 @@ that uses an actor model (Message passing) to achieve a non-blocking I/O.
 ## Get Request
 ```rust
 use async_curl::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient};
+use curl_http_client::*;
 use http::{Method, Request};
 use url::Url;
 
@@ -41,7 +41,7 @@ async fn main() {
 ## Post Request
 ```rust
 use async_curl::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient};
+use curl_http_client::*;
 use http::{Method, Request};
 use url::Url;
 
@@ -71,10 +71,7 @@ async fn main() {
 use std::path::PathBuf;
 
 use async_curl::CurlActor;
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::HttpClient,
-};
+use curl_http_client::*;
 use http::{Method, Request};
 use url::Url;
 
@@ -107,10 +104,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 use std::{fs, path::PathBuf};
 
 use async_curl::CurlActor;
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::{FileSize, HttpClient},
-};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use url::Url;
 
@@ -142,7 +136,7 @@ async fn main() {
 ## Concurrency
 ```rust
 use async_curl::CurlActor;
-use curl_http_client::{collector::Collector, http_client::HttpClient};
+use curl_http_client::*;
 use futures::future;
 use http::{HeaderMap, Method, Request};
 use url::Url;
@@ -191,10 +185,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use async_curl::CurlActor;
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::{BytesOffset, HttpClient},
-};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use url::Url;
 
@@ -227,10 +218,7 @@ async fn main() {
 use std::path::PathBuf;
 
 use async_curl::CurlActor;
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::HttpClient,
-};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use tokio::sync::mpsc::channel;
 use url::Url;
@@ -272,10 +260,7 @@ async fn main() {
 use std::{fs, path::PathBuf};
 
 use async_curl::CurlActor;
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::{FileSize, HttpClient},
-};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use tokio::sync::mpsc::channel;
 use url::Url;
@@ -319,7 +304,7 @@ async fn main() {
 
 ## Get Request
 ```rust
-use curl_http_client::{collector::Collector, http_client::HttpClient};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use url::Url;
 
@@ -344,7 +329,7 @@ let request = Request::builder()
 
 ## Post Request
 ```rust
-use curl_http_client::{collector::Collector, http_client::HttpClient};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use url::Url;
 
@@ -371,10 +356,7 @@ let request = Request::builder()
 ```rust
 use std::path::PathBuf;
 
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::HttpClient,
-};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use url::Url;
 
@@ -401,10 +383,7 @@ let request = Request::builder()
 ```rust
 use std::{fs, path::PathBuf};
 
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::{FileSize, HttpClient},
-};
+use curl_http_client::*;
 use http::{HeaderMap, Method, Request};
 use url::Url;
 
