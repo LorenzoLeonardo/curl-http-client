@@ -8,6 +8,7 @@ that uses an actor model (Message passing) to achieve a non-blocking I/O.
 [![License](https://img.shields.io/github/license/LorenzoLeonardo/curl-http-client.svg)](LICENSE-MIT)
 [![Documentation](https://docs.rs/curl-http-client/badge.svg)](https://docs.rs/curl-http-client)
 [![Build Status](https://github.com/LorenzoLeonardo/curl-http-client/workflows/Rust/badge.svg)](https://github.com/LorenzoLeonardo/curl-http-client/actions)
+[![Downloads](https://img.shields.io/crates/d/curl-http-client)](https://crates.io/crates/curl-http-client)
 
 # Asynchronous Examples
 
