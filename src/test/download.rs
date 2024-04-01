@@ -1,6 +1,6 @@
 use std::fs;
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use http::{Method, Request, StatusCode};
 use test_case::test_case;
 use tokio::sync::mpsc::channel;

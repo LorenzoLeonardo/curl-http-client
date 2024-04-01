@@ -13,7 +13,7 @@ that uses an actor model (Message passing) to achieve a non-blocking I/O.
 
 ## Get Request
 ```rust
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{collector::Collector, http_client::HttpClient};
 use http::{Method, Request};
 use url::Url;
@@ -40,7 +40,7 @@ async fn main() {
 
 ## Post Request
 ```rust
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{collector::Collector, http_client::HttpClient};
 use http::{Method, Request};
 use url::Url;
@@ -70,7 +70,7 @@ async fn main() {
 ```rust
 use std::path::PathBuf;
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::HttpClient,
@@ -106,7 +106,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ```rust
 use std::{fs, path::PathBuf};
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{FileSize, HttpClient},
@@ -141,7 +141,7 @@ async fn main() {
 
 ## Concurrency
 ```rust
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{collector::Collector, http_client::HttpClient};
 use futures::future;
 use http::{HeaderMap, Method, Request};
@@ -190,7 +190,7 @@ async fn main() {
 use std::fs;
 use std::path::PathBuf;
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{BytesOffset, HttpClient},
@@ -226,7 +226,7 @@ async fn main() {
 ```rust
 use std::path::PathBuf;
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::HttpClient,
@@ -271,7 +271,7 @@ async fn main() {
 ```rust
 use std::{fs, path::PathBuf};
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::{FileSize, HttpClient},

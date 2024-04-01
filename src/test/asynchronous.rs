@@ -1,4 +1,4 @@
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use futures::future;
 use http::{Method, Request, StatusCode};
 use url::Url;

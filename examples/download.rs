@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use curl_http_client::{
     collector::{Collector, FileInfo},
     http_client::HttpClient,
