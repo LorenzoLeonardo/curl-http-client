@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::collector::ExtendedHandler;
+use crate::ExtendedHandler;
 
 /// Error type returned by failed curl HTTP requests.
 #[derive(Debug)]

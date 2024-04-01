@@ -8,7 +8,7 @@
 //! ## Get Request
 //! ```rust,no_run
 //! use async_curl::CurlActor;
-//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use curl_http_client::*;
 //! use http::{Method, Request};
 //! use url::Url;
 //!
@@ -36,7 +36,7 @@
 //! ## Post Request
 //! ```rust,no_run
 //! use async_curl::CurlActor;
-//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use curl_http_client::*;
 //! use http::{Method, Request};
 //! use url::Url;
 //!
@@ -66,10 +66,7 @@
 //! use std::path::PathBuf;
 //!
 //! use async_curl::CurlActor;
-//! use curl_http_client::{
-//!     collector::{Collector, FileInfo},
-//!     http_client::HttpClient,
-//! };
+//! use curl_http_client::*;
 //! use http::{Method, Request};
 //! use url::Url;
 //!
@@ -102,10 +99,7 @@
 //! use std::{fs, path::PathBuf};
 //!
 //! use async_curl::CurlActor;
-//! use curl_http_client::{
-//!     collector::{Collector, FileInfo},
-//!     http_client::{FileSize, HttpClient},
-//! };
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
@@ -137,7 +131,7 @@
 //! ## Concurrency
 //! ```rust,no_run
 //! use async_curl::CurlActor;
-//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use curl_http_client::*;
 //! use futures::future;
 //! use http::{HeaderMap, Method, Request};
 //! use url::Url;
@@ -186,10 +180,7 @@
 //! use std::path::PathBuf;
 //!
 //! use async_curl::CurlActor;
-//! use curl_http_client::{
-//!     collector::{Collector, FileInfo},
-//!     http_client::{BytesOffset, HttpClient},
-//! };
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
@@ -222,10 +213,7 @@
 //! use std::path::PathBuf;
 //!
 //! use async_curl::CurlActor;
-//! use curl_http_client::{
-//!     collector::{Collector, FileInfo},
-//!     http_client::HttpClient,
-//! };
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use tokio::sync::mpsc::channel;
 //! use url::Url;
@@ -267,10 +255,7 @@
 //! use std::{fs, path::PathBuf};
 //!
 //! use async_curl::CurlActor;
-//! use curl_http_client::{
-//!     collector::{Collector, FileInfo},
-//!     http_client::{FileSize, HttpClient},
-//! };
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use tokio::sync::mpsc::channel;
 //! use url::Url;
@@ -313,7 +298,7 @@
 //! # Synchronous Examples
 //! ## Get Request
 //! ```rust,no_run
-//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
@@ -336,7 +321,7 @@
 //!
 //! ## Post Request
 //! ```rust,no_run
-//! use curl_http_client::{collector::Collector, http_client::HttpClient};
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
@@ -361,10 +346,7 @@
 //! ```rust,no_run
 //! use std::path::PathBuf;
 //!
-//! use curl_http_client::{
-//!     collector::{Collector, FileInfo},
-//!     http_client::HttpClient,
-//! };
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
@@ -390,10 +372,7 @@
 //! ```rust,no_run
 //! use std::{fs, path::PathBuf};
 //!
-//! use curl_http_client::{
-//!     collector::{Collector, FileInfo},
-//!     http_client::{FileSize, HttpClient},
-//! };
+//! use curl_http_client::*;
 //! use http::{HeaderMap, Method, Request};
 //! use url::Url;
 //!
@@ -427,3 +406,7 @@ pub mod dep {
 
 #[cfg(test)]
 mod test;
+
+pub use collector::*;
+pub use error::*;
+pub use http_client::*;

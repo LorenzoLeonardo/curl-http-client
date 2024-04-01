@@ -1,10 +1,7 @@
 use std::{fs, path::PathBuf};
 
 use async_curl::CurlActor;
-use curl_http_client::{
-    collector::{Collector, FileInfo},
-    http_client::{FileSize, HttpClient},
-};
+use curl_http_client::*;
 use http::{Method, Request};
 
 #[tokio::main(flavor = "current_thread")]
