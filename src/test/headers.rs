@@ -1,6 +1,6 @@
 use std::fs;
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use http::{Method, Request};
 use url::Url;
 

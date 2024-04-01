@@ -1,6 +1,6 @@
 use std::{path::PathBuf, time::Duration};
 
-use async_curl::actor::CurlActor;
+use async_curl::CurlActor;
 use http::{Method, Request};
 
 use curl_http_client::{

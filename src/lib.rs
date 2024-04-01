@@ -7,7 +7,7 @@
 //! # Asynchronous Examples
 //! ## Get Request
 //! ```rust,no_run
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{collector::Collector, http_client::HttpClient};
 //! use http::{Method, Request};
 //! use url::Url;
@@ -35,7 +35,7 @@
 //!
 //! ## Post Request
 //! ```rust,no_run
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{collector::Collector, http_client::HttpClient};
 //! use http::{Method, Request};
 //! use url::Url;
@@ -65,7 +65,7 @@
 //! ```rust,no_run
 //! use std::path::PathBuf;
 //!
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::HttpClient,
@@ -101,7 +101,7 @@
 //! ```rust,no_run
 //! use std::{fs, path::PathBuf};
 //!
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::{FileSize, HttpClient},
@@ -136,7 +136,7 @@
 //!
 //! ## Concurrency
 //! ```rust,no_run
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{collector::Collector, http_client::HttpClient};
 //! use futures::future;
 //! use http::{HeaderMap, Method, Request};
@@ -185,7 +185,7 @@
 //! use std::fs;
 //! use std::path::PathBuf;
 //!
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::{BytesOffset, HttpClient},
@@ -221,7 +221,7 @@
 //! ```rust,no_run
 //! use std::path::PathBuf;
 //!
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::HttpClient,
@@ -266,7 +266,7 @@
 //! ```rust,no_run
 //! use std::{fs, path::PathBuf};
 //!
-//! use async_curl::actor::CurlActor;
+//! use async_curl::CurlActor;
 //! use curl_http_client::{
 //!     collector::{Collector, FileInfo},
 //!     http_client::{FileSize, HttpClient},
