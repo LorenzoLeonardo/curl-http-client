@@ -19,7 +19,7 @@ http = "1.1"
 http-types = "2.12"
 log = "0.4"
 thiserror = "1.0"
-tokio = { version = "1.37", features = ["rt"] }
+tokio = { version = "1.38", features = ["rt"] }
 url = "2.4"
 
 [dev-dependencies]
