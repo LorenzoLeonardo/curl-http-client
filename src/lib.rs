@@ -401,6 +401,7 @@ pub mod error;
 pub mod http_client;
 
 pub mod dep {
+    pub use async_curl;
     pub use curl;
 }
 
