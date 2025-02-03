@@ -24,6 +24,6 @@ url = "2.5"
 
 [dev-dependencies]
 futures = "0.3"
-tempfile = "3.10"
+tempfile = "3.16"
 test-case = "3.2"
 wiremock = "=0.5.15"
