@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
-use http_types::StatusCode;
+use http::status::StatusCode;
 use tempfile::TempDir;
 use wiremock::{
-    http::{HeaderName, HeaderValue, HeaderValues, Method},
+    http::{HeaderName, HeaderValue, Method},
     matchers::path,
     Mock, MockServer, Request, Respond, ResponseTemplate,
 };
@@ -25,7 +25,7 @@ impl MockResponder {
 impl Respond for MockResponder {
     fn respond(&self, request: &Request) -> ResponseTemplate {
         match request.method {
-            Method::Get => match &self.responder {
+            Method::GET => match &self.responder {
                 ResponderType::File => {
                     let mock_file = include_bytes!("sample.jpg");
                     let header_name = HeaderName::from_str("range").unwrap();
@@ -45,7 +45,7 @@ impl Respond for MockResponder {
                         );
                         println!("Content-Range: {}", content_range);
 
-                        ResponseTemplate::new(StatusCode::PartialContent)
+                        ResponseTemplate::new(StatusCode::PARTIAL_CONTENT)
                             .append_header(
                                 HeaderName::from_str("Content-Range").unwrap(),
                                 HeaderValue::from_str(content_range.as_str()).unwrap(),
@@ -61,28 +61,28 @@ impl Respond for MockResponder {
                             .set_body_bytes(&mock_file[offset..])
                     } else {
                         let contents = include_bytes!("sample.jpg");
-                        ResponseTemplate::new(StatusCode::Ok).set_body_bytes(contents.as_slice())
+                        ResponseTemplate::new(StatusCode::OK).set_body_bytes(contents.as_slice())
                     }
                 }
                 ResponderType::Body(body) => {
-                    ResponseTemplate::new(StatusCode::Ok).set_body_bytes(body.as_slice())
+                    ResponseTemplate::new(StatusCode::OK).set_body_bytes(body.as_slice())
                 }
             },
-            Method::Post => match &self.responder {
-                ResponderType::File => ResponseTemplate::new(StatusCode::Ok),
+            Method::POST => match &self.responder {
+                ResponderType::File => ResponseTemplate::new(StatusCode::OK),
                 ResponderType::Body(body) => {
                     assert_eq!(*body, request.body);
-                    ResponseTemplate::new(StatusCode::Ok)
+                    ResponseTemplate::new(StatusCode::OK)
                 }
             },
-            Method::Put => match &self.responder {
+            Method::PUT => match &self.responder {
                 ResponderType::File => {
                     assert_eq!(include_bytes!("sample.jpg").to_vec(), request.body);
-                    ResponseTemplate::new(StatusCode::Ok)
+                    ResponseTemplate::new(StatusCode::OK)
                 }
                 ResponderType::Body(body) => {
                     assert_eq!(*body, request.body);
-                    ResponseTemplate::new(StatusCode::Ok)
+                    ResponseTemplate::new(StatusCode::OK)
                 }
             },
             _ => {
@@ -92,8 +92,8 @@ impl Respond for MockResponder {
     }
 }
 
-fn parse_range(input: &HeaderValues) -> Option<u64> {
-    let input = input.to_string();
+fn parse_range(input: &HeaderValue) -> Option<u64> {
+    let input = input.to_str().unwrap().to_string();
     if let Some(start_pos) = input.find('=') {
         if let Some(end_pos) = input.rfind('-') {
             let numeric_value = &input[start_pos + 1..end_pos];
