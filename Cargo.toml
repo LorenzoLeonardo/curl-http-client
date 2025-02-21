@@ -1,6 +1,6 @@
 [package]
 name = "curl-http-client"
-version = "2.3.3"
+version = "2.3.5"
 edition = "2021"
 authors = ["Lorenzo Leonardo <enzotechcomputersolutions@gmail.com>"]
 license = "MIT"
@@ -15,15 +15,14 @@ categories = ["web-programming::http-client"]
 async-curl = "0.4"
 curl = "0.4"
 derive-deref-rs = "0.1"
-http = "1.1"
-http-types = "2.12"
+http = "1.2"
 log = "0.4"
-thiserror = "1.0"
-tokio = { version = "1.37", features = ["rt"] }
-url = "2.4"
+thiserror = "2.0"
+tokio = { version = "1.43", features = ["rt"] }
+url = "2.5"
 
 [dev-dependencies]
 futures = "0.3"
-tempfile = "3.10"
+tempfile = "3.17"
 test-case = "3.2"
-wiremock = "=0.5.15"
+wiremock = "0.6"
