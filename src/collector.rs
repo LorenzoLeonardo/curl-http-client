@@ -338,8 +338,10 @@ impl Handler for Collector {
         match self {
             Collector::File(file_info) | Collector::FileAndHeaders(file_info, _) => {
                 if let Some(abort) = &file_info.abort {
-                    let abort = *abort.lock().unwrap();
-                    !abort
+                    abort.lock().map(|a| !*a).unwrap_or_else(|err| {
+                        log::error!("{:?}", err);
+                        false
+                    })
                 } else {
                     true
                 }
@@ -347,8 +349,10 @@ impl Handler for Collector {
             Collector::Ram(_) | Collector::RamAndHeaders(_, _) => true,
             Collector::Streaming(stream, _) => {
                 if let Some(abort) = &stream.abort {
-                    let abort = *abort.lock().unwrap();
-                    !abort
+                    abort.lock().map(|a| !*a).unwrap_or_else(|err| {
+                        log::error!("{:?}", err);
+                        false
+                    })
                 } else {
                     true
                 }
