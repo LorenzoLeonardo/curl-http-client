@@ -150,6 +150,18 @@ fn send_transfer_info(info: &FileInfo) {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct StreamData {
+    pub chunk: Vec<u8>,
+    pub header: Vec<u8>,
+}
+
+#[derive(Clone, Debug)]
+pub struct Stream {
+    pub chunk_sender: Sender<StreamData>,
+    pub abort: Option<AbortPerform>,
+}
+
 /// This is an extended trait for the curl::easy::Handler trait.
 pub trait ExtendedHandler: Handler {
     // Return the response body if the Collector is available.
@@ -176,6 +188,8 @@ pub enum Collector {
     RamAndHeaders(Vec<u8>, Vec<u8>),
     /// Collector::FileAndHeaders(`FileInfo`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
     FileAndHeaders(FileInfo, Vec<u8>),
+
+    Streaming(Stream, Vec<u8>),
 }
 
 impl Handler for Collector {
@@ -232,6 +246,20 @@ impl Handler for Collector {
                 send_transfer_info(info);
                 Ok(data.len())
             }
+            Collector::Streaming(stream, header) => {
+                let tx = stream.chunk_sender.clone();
+                let chunk = data.to_vec();
+                let stream_data = StreamData {
+                    chunk: chunk.clone(),
+                    header: header.clone(),
+                };
+                tokio::spawn(async move {
+                    tx.send(stream_data).await.map_err(|e| {
+                        trace!("{:?}", e);
+                    })
+                });
+                Ok(data.len())
+            }
         }
     }
     /// This will read the chunks of data from a file that will be uploaded
@@ -284,6 +312,7 @@ impl Handler for Collector {
                 send_transfer_info(info);
                 Ok(read_size)
             }
+            Collector::Streaming(_stream, _header) => Ok(0),
         }
     }
 
@@ -295,6 +324,9 @@ impl Handler for Collector {
                 headers.extend_from_slice(data);
             }
             Collector::FileAndHeaders(_, headers) => {
+                headers.extend_from_slice(data);
+            }
+            Collector::Streaming(_, headers) => {
                 headers.extend_from_slice(data);
             }
         }
@@ -313,6 +345,14 @@ impl Handler for Collector {
                 }
             }
             Collector::Ram(_) | Collector::RamAndHeaders(_, _) => true,
+            Collector::Streaming(stream, _) => {
+                if let Some(abort) = &stream.abort {
+                    let abort = *abort.lock().unwrap();
+                    !abort
+                } else {
+                    true
+                }
+            }
         }
     }
 }
@@ -340,6 +380,7 @@ impl ExtendedHandler for Collector {
                 }
             }
             Collector::FileAndHeaders(_, _) => None,
+            Collector::Streaming(_, _) => None,
         }
     }
 
@@ -379,6 +420,23 @@ impl ExtendedHandler for Collector {
                 }
             }
             Collector::FileAndHeaders(_, headers) => {
+                let header_str = std::str::from_utf8(headers).unwrap();
+                let mut header_map = HeaderMap::new();
+
+                for line in header_str.lines() {
+                    // Split each line into key-value pairs
+                    if let Some((key, value)) = line.split_once(": ").to_owned() {
+                        if let Ok(header_name) = HeaderName::from_bytes(key.as_bytes()) {
+                            if let Ok(header_value) = HeaderValue::from_str(value) {
+                                // Insert the key-value pair into the HeaderMap
+                                header_map.insert(header_name, header_value);
+                            }
+                        }
+                    }
+                }
+                (None, Some(header_map))
+            }
+            Collector::Streaming(_, headers) => {
                 let header_str = std::str::from_utf8(headers).unwrap();
                 let mut header_map = HeaderMap::new();
 
