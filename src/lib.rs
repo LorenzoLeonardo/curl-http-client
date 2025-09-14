@@ -396,7 +396,7 @@
 //! println!("Response: {:?}", response);
 //! ```
 //!
-//! //! ## Streaming
+//! ## Streaming
 //! ```rust,no_run
 //! use std::sync::Arc;
 //! use async_curl::CurlActor;
