@@ -11,6 +11,7 @@ use wiremock::{
 pub enum ResponderType {
     File,
     Body(Vec<u8>),
+    Stream, // data + chunk size
 }
 pub struct MockResponder {
     responder: ResponderType,
@@ -67,12 +68,20 @@ impl Respond for MockResponder {
                 ResponderType::Body(body) => {
                     ResponseTemplate::new(StatusCode::OK).set_body_bytes(body.as_slice())
                 }
+                ResponderType::Stream => {
+                    let contents = include_bytes!("sample.jpg");
+                    ResponseTemplate::new(StatusCode::OK).set_body_bytes(contents.as_slice())
+                }
             },
             Method::POST => match &self.responder {
                 ResponderType::File => ResponseTemplate::new(StatusCode::OK),
                 ResponderType::Body(body) => {
                     assert_eq!(*body, request.body);
                     ResponseTemplate::new(StatusCode::OK)
+                }
+                ResponderType::Stream => {
+                    let contents = include_bytes!("sample.jpg");
+                    ResponseTemplate::new(StatusCode::OK).set_body_bytes(contents.as_slice())
                 }
             },
             Method::PUT => match &self.responder {
@@ -83,6 +92,10 @@ impl Respond for MockResponder {
                 ResponderType::Body(body) => {
                     assert_eq!(*body, request.body);
                     ResponseTemplate::new(StatusCode::OK)
+                }
+                ResponderType::Stream => {
+                    let contents = include_bytes!("sample.jpg");
+                    ResponseTemplate::new(StatusCode::OK).set_body_bytes(contents.as_slice())
                 }
             },
             _ => {

@@ -137,6 +137,7 @@ async fn test_download_with_transfer_speed_sender() {
         while let Some(speed) = rx.recv().await {
             println!("Download Speed: {} kB/s", speed.as_bytes_per_sec());
         }
+        println!("Recieved ended.");
     });
 
     let response = HttpClient::new(collector)
