@@ -396,6 +396,50 @@
 //! println!("Response: {:?}", response);
 //! ```
 //!
+//! //! ## Streaming
+//! ```rust,no_run
+//! use std::sync::Arc;
+//! use async_curl::CurlActor;
+//! use http::{Method, Request, StatusCode};
+//! use tokio::sync::Mutex;
+//! use url::Url;
+//! use curl_http_client::*;
+//!
+//! #[tokio::main(flavor = "current_thread")]
+//! async fn main() {
+//!     let actor = CurlActor::new();
+//!     let (stream, mut rx) = StreamHandler::new();
+//!     let collector = Collector::Streaming(stream, Vec::new());
+//!     let result = Arc::new(Mutex::new(Vec::new()));
+//!     let inner = result.clone();
+//!     let handle = tokio::spawn(async move {
+//!         while let Some(chunk) = rx.recv().await {
+//!             println!("Recieving Data: {}", chunk.len());
+//!             inner.lock().await.extend_from_slice(&chunk);
+//!         }
+//!         println!("Streaming done");
+//!     });
+//!
+//!     let request = Request::builder()
+//!         .uri("<TARGET URL>")
+//!         .method(Method::GET)
+//!         .body(None)
+//!         .unwrap();
+//!
+//!     let response = HttpClient::new(collector)
+//!         .request(request)
+//!         .unwrap()
+//!         .nonblocking(actor)
+//!         .perform()
+//!         .await
+//!         .unwrap();
+//!
+//!     println!("Response: {:?}", response);
+//!     println!("Headers: {:?}", response.headers());
+//!
+//!     handle.await.unwrap();
+//!}
+//!
 pub mod collector;
 pub mod error;
 pub mod http_client;
