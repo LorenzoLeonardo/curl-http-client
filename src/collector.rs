@@ -12,7 +12,7 @@ use curl::easy::{Handler, ReadError, WriteError};
 use derive_deref_rs::Deref;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use log::trace;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::{Sender, UnboundedSender};
 
 /// This is an information about the transfer(Download/Upload) speed that will be sent across tasks.
 /// It is useful to get the transfer speed and displayed it according to
@@ -151,15 +151,17 @@ fn send_transfer_info(info: &FileInfo) {
 }
 
 #[derive(Clone, Debug)]
-pub struct StreamData {
-    pub chunk: Vec<u8>,
-    pub header: Vec<u8>,
+pub struct StreamHandler {
+    pub chunk_sender: UnboundedSender<Vec<u8>>,
+    pub abort: Option<AbortPerform>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Stream {
-    pub chunk_sender: Sender<StreamData>,
-    pub abort: Option<AbortPerform>,
+fn send_stream_data(stream: &StreamHandler, data: Vec<u8>) {
+    let tx = stream.chunk_sender.clone();
+
+    let _ = tx.send(data).map_err(|e| {
+        trace!("{:?}", e);
+    });
 }
 
 /// This is an extended trait for the curl::easy::Handler trait.
@@ -189,7 +191,7 @@ pub enum Collector {
     /// Collector::FileAndHeaders(`FileInfo`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
     FileAndHeaders(FileInfo, Vec<u8>),
 
-    Streaming(Stream, Vec<u8>),
+    Streaming(StreamHandler, Vec<u8>),
 }
 
 impl Handler for Collector {
@@ -246,18 +248,8 @@ impl Handler for Collector {
                 send_transfer_info(info);
                 Ok(data.len())
             }
-            Collector::Streaming(stream, header) => {
-                let tx = stream.chunk_sender.clone();
-                let chunk = data.to_vec();
-                let stream_data = StreamData {
-                    chunk: chunk.clone(),
-                    header: header.clone(),
-                };
-                tokio::spawn(async move {
-                    tx.send(stream_data).await.map_err(|e| {
-                        trace!("{:?}", e);
-                    })
-                });
+            Collector::Streaming(stream, _) => {
+                send_stream_data(stream, data.to_vec());
                 Ok(data.len())
             }
         }
@@ -312,7 +304,7 @@ impl Handler for Collector {
                 send_transfer_info(info);
                 Ok(read_size)
             }
-            Collector::Streaming(_stream, _header) => Ok(0),
+            Collector::Streaming(_, _) => Ok(0),
         }
     }
 
