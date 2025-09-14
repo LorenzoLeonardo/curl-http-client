@@ -12,7 +12,7 @@ use curl::easy::{Handler, ReadError, WriteError};
 use derive_deref_rs::Deref;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use log::trace;
-use tokio::sync::mpsc::{Sender, UnboundedSender};
+use tokio::sync::mpsc::{unbounded_channel, Sender, UnboundedReceiver, UnboundedSender};
 
 /// This is an information about the transfer(Download/Upload) speed that will be sent across tasks.
 /// It is useful to get the transfer speed and displayed it according to
@@ -150,10 +150,71 @@ fn send_transfer_info(info: &FileInfo) {
     }
 }
 
+/// `StreamHandler` is a lightweight helper for managing streamed responses.
+///
+/// It provides two main components:
+/// - `chunk_sender`: An asynchronous channel sender used to forward each
+///   received chunk of data to a consumer in real time.
+/// - `abort`: An optional abort flag that can be used to stop an ongoing
+///   curl perform operation from another thread.
+///
+/// This struct is typically used in combination with the `Collector::Streaming`
+/// variant to enable progressive consumption of large or continuous responses
+/// without buffering everything in memory.
 #[derive(Clone, Debug)]
 pub struct StreamHandler {
-    pub chunk_sender: UnboundedSender<Vec<u8>>,
-    pub abort: Option<AbortPerform>,
+    /// Asynchronous sender that delivers streamed response chunks (`Vec<u8>`)
+    /// to a receiving end. Each received chunk is sent immediately, enabling
+    /// consumers to process data progressively.
+    chunk_sender: UnboundedSender<Vec<u8>>,
+
+    /// Optional abort handle (`AbortPerform`) that can be set to signal
+    /// cancellation of the ongoing curl perform operation.
+    ///
+    /// When triggered, this flag instructs the underlying transfer to stop early.
+    abort: Option<AbortPerform>,
+}
+
+impl StreamHandler {
+    /// Creates a new `StreamHandler` along with its corresponding receiver.
+    ///
+    /// This convenience method sets up a channel for streaming data,
+    /// returning both the `StreamHandler` (containing the sender) and
+    /// the `UnboundedReceiver` for consuming chunks.
+    ///
+    /// # Returns
+    /// A tuple of:
+    /// - `StreamHandler`: The handler containing the sender and optional abort flag.
+    /// - `UnboundedReceiver<Vec<u8>>`: The receiving end for streamed chunks.
+    pub fn new() -> (Self, UnboundedReceiver<Vec<u8>>) {
+        let (tx, rx) = unbounded_channel();
+        (
+            Self {
+                chunk_sender: tx,
+                abort: None,
+            },
+            rx,
+        )
+    }
+
+    /// Associates an abort handle with this `StreamHandler`.
+    ///
+    /// `AbortPerform` is a shared flag across threads that can be toggled
+    /// to `true` in order to abort the curl perform operation prematurely.
+    ///
+    /// # Example
+    /// ```
+    /// use curl_http_client::AbortPerform;
+    /// use curl_http_client::StreamHandler;
+    ///
+    /// let (handler, rx) = StreamHandler::new();
+    /// let aborter = AbortPerform::new();
+    /// let handler = handler.with_perform_aborter(aborter);
+    /// ```
+    pub fn with_perform_aborter(mut self, abort: AbortPerform) -> Self {
+        self.abort = Some(abort);
+        self
+    }
 }
 
 fn send_stream_data(stream: &StreamHandler, data: Vec<u8>) {
@@ -180,6 +241,8 @@ pub trait ExtendedHandler: Handler {
 /// Collector::Ram(`Vec<u8>`) is used to store response body into Memory.
 /// Collector::RamWithHeaders(`Vec<u8>`, `Vec<u8>`) is used to store response body into Memory and with complete headers.
 /// Collector::FileAndHeaders(`FileInfo`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
+/// Collector::Streaming(`StreamHandler`, `Vec<u8>`) is used to process the response body as a **stream of chunks** instead of buffering the entire
+/// response in memory or writing it directly to a file.
 #[derive(Clone, Debug)]
 pub enum Collector {
     /// Collector::File(`FileInfo`) is used to be able to download and upload files.
@@ -190,7 +253,11 @@ pub enum Collector {
     RamAndHeaders(Vec<u8>, Vec<u8>),
     /// Collector::FileAndHeaders(`FileInfo`, `Vec<u8>`) is used to be able to download and upload files and with complete headers.
     FileAndHeaders(FileInfo, Vec<u8>),
-
+    /// Collector::Streaming(`StreamHandler`, `Vec<u8>`) is used to process
+    /// the response body as a **stream of chunks** instead of buffering the entire
+    /// response in memory or writing it directly to a file with complete headers.
+    /// This is useful for large responses, continuous data feeds, or situations
+    /// where you don’t want to block until the full body is received.
     Streaming(StreamHandler, Vec<u8>),
 }
 

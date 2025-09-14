@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use async_curl::CurlActor;
 use http::{Method, Request, StatusCode};
-use tokio::sync::mpsc::unbounded_channel;
 use tokio::sync::Mutex;
 use url::Url;
 
@@ -17,13 +16,8 @@ async fn test_streaming() {
     let (server, _tempdir) = setup_test_environment(responder).await;
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
-    let (tx, mut rx) = unbounded_channel();
     let actor = CurlActor::new();
-    let stream = StreamHandler {
-        chunk_sender: tx,
-        abort: None,
-    };
-
+    let (stream, mut rx) = StreamHandler::new();
     let collector = Collector::Streaming(stream, Vec::new());
     let result = Arc::new(Mutex::new(Vec::new()));
     let inner = result.clone();
