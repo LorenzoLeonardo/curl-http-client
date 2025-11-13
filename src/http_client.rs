@@ -785,6 +785,30 @@ where
         self.easy.post(enable).map_err(Error::Curl)?;
         Ok(self)
     }
+
+    /// Verify the certificate's name against host.
+    ///
+    /// This should be disabled with great caution! It basically disables the
+    /// security features of SSL if it is disabled.
+    ///
+    /// By default this option is set to `true` and corresponds to
+    /// `CURLOPT_SSL_VERIFYHOST`.
+    pub fn ssl_verify_host(mut self, enable: bool) -> Result<Self, Error<C>> {
+        self.easy.ssl_verify_host(enable).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Verify the peer's SSL certificate.
+    ///
+    /// This should be disabled with great caution! It basically disables the
+    /// security features of SSL if it is disabled.
+    ///
+    /// By default this option is set to `true` and corresponds to
+    /// `CURLOPT_SSL_VERIFYPEER`.
+    pub fn ssl_verify_peer(mut self, enable: bool) -> Result<Self, Error<C>> {
+        self.easy.ssl_verify_peer(enable).map_err(Error::Curl)?;
+        Ok(self)
+    }
 }
 
 /// The AsyncPerform struct is the result when calling nonblocking() function to signify the end of the builder.
