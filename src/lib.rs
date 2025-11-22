@@ -447,6 +447,8 @@ pub mod http_client;
 pub mod dep {
     pub use async_curl;
     pub use curl;
+    pub use http;
+    pub use url;
 }
 
 #[cfg(test)]
