@@ -1,6 +1,6 @@
 [package]
 name = "curl-http-client"
-version = "2.4.1"
+version = "2.5.0"
 edition = "2021"
 authors = ["Lorenzo Leonardo <enzotechcomputersolutions@gmail.com>"]
 license = "MIT"
