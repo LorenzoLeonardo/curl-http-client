@@ -1,7 +1,7 @@
 use std::{fmt::Debug, path::Path, time::Duration};
 
 use async_curl::Actor;
-use curl::easy::{Auth, Easy2, Handler, HttpVersion, ProxyType, SslVersion, TimeCondition};
+use curl::easy::{Auth, Easy2, Handler, HttpVersion, List, ProxyType, SslVersion, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{
     header::{CONTENT_LENGTH, CONTENT_TYPE},
@@ -52,6 +52,32 @@ where
     /// This marks the end of the curl builder to be able to do synchronous operation during perform.
     pub fn blocking(self) -> SyncPerform<C> {
         SyncPerform::<C> { easy: self.easy }
+    }
+
+    /// Add some headers to this HTTP request.
+    ///
+    /// If you add a header that is otherwise used internally, the value here
+    /// takes precedence. If a header is added with no content (like `Accept:`)
+    /// the internally the header will get disabled. To add a header with no
+    /// content, use the form `MyHeader;` (not the trailing semicolon).
+    ///
+    /// Headers must not be CRLF terminated. Many replaced headers have common
+    /// shortcuts which should be prefered.
+    pub fn http_headers(mut self, list: List) -> Result<Self, Error<C>> {
+        self.easy.http_headers(list).map_err(Error::Curl)?;
+        Ok(self)
+    }
+
+    /// Configures the data that will be uploaded as part of a POST.
+    ///
+    /// Note that the data is copied into this handle and if that's not desired
+    /// then the read callbacks can be used instead.
+    ///
+    /// By default this option is not set and corresponds to
+    /// `CURLOPT_COPYPOSTFIELDS`.
+    pub fn post_fields_copy(mut self, bytes: &[u8]) -> Result<Self, Error<C>> {
+        self.easy.post_fields_copy(bytes).map_err(Error::Curl)?;
+        Ok(self)
     }
 
     /// Sets the HTTP request.
