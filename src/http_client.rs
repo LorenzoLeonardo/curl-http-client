@@ -1,7 +1,9 @@
 use std::{fmt::Debug, path::Path, time::Duration};
 
+use async_curl::dep::curl::easy::{
+    Auth, Easy2, Handler, HttpVersion, List, ProxyType, SslVersion, TimeCondition,
+};
 use async_curl::Actor;
-use curl::easy::{Auth, Easy2, Handler, HttpVersion, List, ProxyType, SslVersion, TimeCondition};
 use derive_deref_rs::Deref;
 use http::{
     header::{CONTENT_LENGTH, CONTENT_TYPE},
@@ -92,7 +94,7 @@ where
                 Error::Curl(e)
             })?;
 
-        let mut headers = curl::easy::List::new();
+        let mut headers = List::new();
 
         request.headers().iter().try_for_each(|(name, value)| {
             headers

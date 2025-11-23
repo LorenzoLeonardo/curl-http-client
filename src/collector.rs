@@ -8,7 +8,7 @@ use std::{
     path::PathBuf,
 };
 
-use curl::easy::{Handler, ReadError, WriteError};
+use async_curl::dep::curl::easy::{Handler, ReadError, WriteError};
 use derive_deref_rs::Deref;
 use http::{HeaderMap, HeaderName, HeaderValue};
 use log::trace;

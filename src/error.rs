@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use async_curl::dep::curl;
+
 use crate::ExtendedHandler;
 
 /// Error type returned by failed curl HTTP requests.
