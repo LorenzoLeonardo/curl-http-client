@@ -17,7 +17,7 @@ derive-deref-rs = "0.1"
 http = "1.4"
 log = "0.4"
 thiserror = "2.0"
-tokio = { version = "1.48", features = ["rt"] }
+tokio = { version = "1.49", features = ["rt"] }
 url = "2.5"
 
 [dev-dependencies]
