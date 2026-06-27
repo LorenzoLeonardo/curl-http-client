@@ -8,12 +8,12 @@ use crate::http_client::HttpClient;
 use crate::test::test_setup::{setup_test_environment, MockResponder, ResponderType};
 
 #[tokio::test]
-async fn test_across_multiple_threads() {
+async fn test_across_multiple_threads_using_multi() {
     let responder = MockResponder::new(ResponderType::Body("test body".as_bytes().to_vec()));
     let (server, _tempdir) = setup_test_environment(responder).await;
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
-    let curl = CurlActor::new();
+    let curl = CurlActor::new().transfer_type_multi();
     let collector = Collector::Ram(Vec::new());
     let request = Request::builder()
         .uri(target_url.as_str())
@@ -86,7 +86,7 @@ async fn test_across_multiple_threads_using_easy2() {
                 .request(request)
                 .unwrap()
                 .nonblocking(curl)
-                .perform_easy2()
+                .perform()
                 .await
                 .unwrap();
             println!("Response: {:?}", response);
