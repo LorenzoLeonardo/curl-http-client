@@ -865,7 +865,7 @@ where
     /// want to decide how to transform the response yourself.
     ///
     /// This becomes a non-blocking I/O since the actual perform operation is done
-    /// at the actor side using Curl-Multi.
+    /// at the actor side using Curl-Multi perform.
     pub async fn send_request(self) -> Result<Easy2<C>, Error<C>> {
         self.actor.send_request(self.easy).await.map_err(|e| {
             trace!("{:?}", e);
@@ -873,9 +873,81 @@ where
         })
     }
 
-    /// This will perform the curl operation asynchronously.
+    /// This will send the request asynchronously,
+    /// and return the underlying [`Easy2<C>`](https://docs.rs/curl/latest/curl/easy/struct.Easy2.html) useful if you
+    /// want to decide how to transform the response yourself.
+    ///
+    /// This becomes a non-blocking I/O since the actual perform operation is done
+    /// at the actor side using Curl Easy2 perform.
+    pub async fn send_request_easy2(self) -> Result<Easy2<C>, Error<C>> {
+        self.actor.perform_easy2(self.easy).await.map_err(|e| {
+            trace!("{:?}", e);
+            Error::Perform(e)
+        })
+    }
+
+    /// This will perform the curl operation asynchronously using Curl Multi perform.
     pub async fn perform(self) -> Result<Response<Option<Vec<u8>>>, Error<C>> {
         let easy = self.send_request().await?;
+
+        let (data, headers) = easy.get_ref().get_response_body_and_headers();
+        let status_code = easy.response_code().map_err(|e| {
+            trace!("{:?}", e);
+            Error::Curl(e)
+        })? as u16;
+
+        let response_header = if let Some(response_header) = headers {
+            response_header
+        } else {
+            let mut response_header = easy
+                .content_type()
+                .map_err(|e| {
+                    trace!("{:?}", e);
+                    Error::Curl(e)
+                })?
+                .map(|content_type| {
+                    Ok(vec![(
+                        CONTENT_TYPE,
+                        HeaderValue::from_str(content_type).map_err(|err| {
+                            trace!("{:?}", err);
+                            Error::Http(err.to_string())
+                        })?,
+                    )]
+                    .into_iter()
+                    .collect::<HeaderMap>())
+                })
+                .transpose()?
+                .unwrap_or_else(HeaderMap::new);
+
+            let content_length = easy.content_length_download().map_err(|e| {
+                trace!("{:?}", e);
+                Error::Curl(e)
+            })?;
+
+            response_header.insert(
+                CONTENT_LENGTH,
+                HeaderValue::from_str(content_length.to_string().as_str()).map_err(|err| {
+                    trace!("{:?}", err);
+                    Error::Http(err.to_string())
+                })?,
+            );
+
+            response_header
+        };
+
+        let mut response = Response::builder();
+        for (name, value) in &response_header {
+            response = response.header(name, value);
+        }
+
+        response = response.status(status_code);
+
+        response.body(data).map_err(|e| Error::Http(e.to_string()))
+    }
+
+    /// This will perform the curl operation asynchronously using Curl Easy2 perform.
+    pub async fn perform_easy2(self) -> Result<Response<Option<Vec<u8>>>, Error<C>> {
+        let easy = self.send_request_easy2().await?;
 
         let (data, headers) = easy.get_ref().get_response_body_and_headers();
         let status_code = easy.response_code().map_err(|e| {
