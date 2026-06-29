@@ -13,7 +13,7 @@ async fn test_across_multiple_threads_using_multi() {
     let (server, _tempdir) = setup_test_environment(responder).await;
     let target_url = Url::parse(format!("{}/test", server.uri()).as_str()).unwrap();
 
-    let curl = CurlActor::new().transfer_type_multi();
+    let curl = CurlActor::new().use_multi_transfer();
     let collector = Collector::Ram(Vec::new());
     let request = Request::builder()
         .uri(target_url.as_str())
