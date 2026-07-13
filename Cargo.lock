@@ -23,9 +23,9 @@ dependencies = [
 
 [[package]]
 name = "async-curl"
-version = "0.9.0"
+version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "791dd99ba15a64141a7e07d3633cf44967ac6a075f66144d7b7ac92ad188f06e"
+checksum = "08a875958622ca991fcf92d1ee103661bcd8ed00b0bc6c83aeadb735e5d3158f"
 dependencies = [
  "async-trait",
  "curl",
